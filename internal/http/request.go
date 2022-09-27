@@ -23,10 +23,11 @@
 package http
 
 import (
-	"github.com/gin-gonic/gin"
-	"github.com/opencurve/pigeon/internal/configure"
 	"io"
 	"strings"
+
+	"github.com/gin-gonic/gin"
+	"github.com/opencurve/pigeon/internal/configure"
 )
 
 type Buffer struct {
