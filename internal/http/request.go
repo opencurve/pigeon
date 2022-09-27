@@ -23,10 +23,10 @@
 package http
 
 import (
-	"io"
-
 	"github.com/gin-gonic/gin"
 	"github.com/opencurve/pigeon/internal/configure"
+	"io"
+	"strings"
 )
 
 type Buffer struct {
@@ -57,14 +57,17 @@ type (
 )
 
 func NewRequest(c *gin.Context, cfg *configure.Configure) *Request {
+	// request headers
 	request := c.Request
 	headers := map[string]string{}
-	for k := range c.Request.Header {
+	for k := range request.Header {
 		headers[k] = c.GetHeader(k)
 	}
+	// request arguments
 	args := map[string]string{}
-	for _, param := range c.Params {
-		args[param.Key] = param.Value
+	values := request.URL.Query()
+	for key := range values {
+		args[key] = values.Get(key)
 	}
 
 	return &Request{
@@ -115,6 +118,16 @@ func (r *Request) ProxyPass() bool {
 	return false
 }
 
+func (r *Request) SendString(message string) bool {
+	r.content = &Message{message: message}
+	return false
+}
+
+func (r *Request) SendJSON(m gin.H) bool {
+	r.content = &JSON{m: m}
+	return false
+}
+
 func (r *Request) SendFile(filename string) bool {
 	r.content = &File{filename: filename}
 	return false
@@ -127,7 +140,7 @@ func (r *Request) NextHandler() bool {
 func (r *Request) Exit(code int, message ...string) bool {
 	r.Status = code
 	if len(message) > 0 {
-		r.content = &Message{message: message[0]}
+		r.content = &Message{message: strings.Join(message, "")}
 	}
 	return false
 }
@@ -135,24 +148,30 @@ func (r *Request) Exit(code int, message ...string) bool {
 func (r *Request) Finalize() {
 	ctx := r.Context
 
-	// status code
+	// response status
 	status := 200
 	if r.Status != -1 {
-		ctx.Status(status)
+		status = r.Status
 	}
+	ctx.Status(status)
 
 	// response headers
 	for k, v := range r.HeadersOut {
 		ctx.Header(k, v)
 	}
 
+	// response body
 	content := r.content
-	if content != nil {
-		switch content.(type) {
-		case *Message:
-			ctx.String(status, content.(*Message).message)
-		case *File:
-			ctx.File(content.(*File).filename)
-		}
+	if content == nil {
+		return
+	}
+
+	switch content.(type) {
+	case *Message:
+		ctx.String(status, content.(*Message).message)
+	case *JSON:
+		ctx.JSON(status, content.(*JSON).m)
+	case *File:
+		ctx.File(content.(*File).filename)
 	}
 }

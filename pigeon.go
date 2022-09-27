@@ -25,6 +25,7 @@ package pigeon
 import (
 	"os"
 
+	"github.com/gin-gonic/gin"
 	"github.com/opencurve/pigeon/cli/command"
 	"github.com/opencurve/pigeon/internal/core"
 	"github.com/opencurve/pigeon/internal/http"
@@ -33,6 +34,7 @@ import (
 type (
 	Request    = http.Request
 	HTTPServer = http.HTTPServer
+	JSON       = gin.H
 )
 
 var (

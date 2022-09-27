@@ -22,6 +22,10 @@
 
 package http
 
+import (
+	"github.com/gin-gonic/gin"
+)
+
 type content interface {
 	data()
 }
@@ -30,10 +34,16 @@ type Message struct {
 	message string
 }
 
-func (m *Message) data() {}
+func (_ *Message) data() {}
+
+type JSON struct {
+	m gin.H
+}
+
+func (_ *JSON) data() {}
 
 type File struct {
 	filename string
 }
 
-func (f *File) data() {}
+func (_ *File) data() {}

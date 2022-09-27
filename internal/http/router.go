@@ -58,14 +58,13 @@ func (r *router) Group(relativePath string, handlers ...HandlerFunc) RouterGroup
 }
 
 func (r *router) Route(relativePath string, handlers ...HandlerFunc) {
-	r.handlers = append(r.handlers, handlers...)
-	r.group.Any(relativePath, r.warpHandlers())
+	r.group.Any(relativePath, r.warpHandlers(append(r.handlers, handlers...)))
 }
 
-func (r *router) warpHandlers() gin.HandlerFunc {
+func (r *router) warpHandlers(handlers HandlersChain) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		request := NewRequest(c, r.server.configure)
-		for _, handler := range r.handlers {
+		for _, handler := range handlers {
 			if !handler(request) {
 				break
 			}

@@ -69,3 +69,8 @@ func (s *HTTPServer) RouterGroup(relativePath string, handlers ...HandlerFunc) R
 	router := &router{server: s, group: &s.engine.RouterGroup}
 	return router.Group(relativePath, handlers...)
 }
+
+func (s *HTTPServer) DefaultRoute(handlers ...HandlerFunc) {
+	router := &router{server: s}
+	s.engine.NoRoute(router.warpHandlers(handlers))
+}
