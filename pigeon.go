@@ -29,6 +29,7 @@ import (
 	"github.com/opencurve/pigeon/cli/command"
 	"github.com/opencurve/pigeon/internal/core"
 	"github.com/opencurve/pigeon/internal/http"
+	"github.com/opencurve/pigeon/pkg/log"
 )
 
 type (
@@ -39,6 +40,7 @@ type (
 
 var (
 	NewHTTPServer = http.NewHTTPServer
+	Field        = log.Field
 )
 
 func Serve(servers ...*HTTPServer) {

@@ -63,7 +63,7 @@ func (r *router) Route(relativePath string, handlers ...HandlerFunc) {
 
 func (r *router) warpHandlers(handlers HandlersChain) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		request := NewRequest(c, r.server.configure)
+		request := NewRequest(c, r.server)
 		for _, handler := range handlers {
 			if !handler(request) {
 				break

@@ -27,13 +27,18 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/opencurve/pigeon/internal/configure"
+	"github.com/opencurve/pigeon/pkg/log"
+	"go.uber.org/zap"
 )
 
 type HTTPServer struct {
-	name      []string
-	configure *configure.Configure
-	serverCfg *configure.ServerConfigure
-	engine    *gin.Engine
+	name         []string
+	configure    *configure.Configure
+	serverCfg    *configure.ServerConfigure
+	accessLogger *zap.Logger
+	errorLogger  *zap.Logger
+
+	engine *gin.Engine
 }
 
 func NewHTTPServer(name ...string) *HTTPServer {
@@ -46,10 +51,31 @@ func NewHTTPServer(name ...string) *HTTPServer {
 	}
 }
 
-func (s *HTTPServer) Init(cfg *configure.Configure) error {
-	s.configure = cfg
-	s.serverCfg = configure.DefaultServer()
+func (s *HTTPServer) initLogger() error {
+	cfg := s.serverCfg
+
+	// error logger
+	logger, err := log.New(cfg.GetLogLevel(), cfg.GetErrorLogPath())
+	if err != nil {
+		return err
+	}
+	s.errorLogger = logger
+
+	// access logger
+	logger, err = log.New("info", cfg.GetAccessLogPath())
+	if err != nil {
+		return err
+	}
+	logger = logger.WithOptions(zap.WithCaller(false))
+	s.accessLogger = logger
+
 	return nil
+}
+
+func (s *HTTPServer) Init(config *configure.Configure) error {
+	s.configure = config
+	s.serverCfg = configure.DefaultServer()
+	return s.initLogger()
 }
 
 func (s *HTTPServer) Start() error {

@@ -28,35 +28,22 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-var (
-	Debug = zaplog.Debug
-	Info  = zaplog.Info
-	Warn  = zaplog.Warn
-	Error = zaplog.Error
-)
+type M struct {
+	Key   string
+	Value string
+}
 
-func Init(level, filename string) error {
-	gl, props, err := zaplog.InitLogger(&zaplog.Config{
+func New(level, filename string) (*zap.Logger, error) {
+	logger, _, err := zaplog.InitLogger(&zaplog.Config{
 		Level:            level,
 		File:             zaplog.FileLogConfig{Filename: filename},
 		Format:           "text",
 		DisableTimestamp: false,
 	}, zap.AddStacktrace(zapcore.FatalLevel))
 
-	if err != nil {
-		return err
-	}
-
-	zaplog.ReplaceGlobals(gl, props)
-	return nil
+	return logger, err
 }
 
-func SwitchLevel(err error) func(msg string, fields ...zap.Field) {
-	if err != nil {
-		return zaplog.Error
-	}
-	return zaplog.Info
-}
 
 func Field(key string, val interface{}) zap.Field {
 	switch val.(type) {

@@ -27,7 +27,12 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/opencurve/pigeon/internal/configure"
+	"github.com/opencurve/pigeon/pkg/log"
+	"go.uber.org/zap"
+)
+
+var (
+	F = log.Field
 )
 
 type Buffer struct {
@@ -37,8 +42,8 @@ type Buffer struct {
 
 type (
 	Request struct {
-		Context   *gin.Context
-		configure *configure.Configure
+		Context *gin.Context
+		server  *HTTPServer
 
 		// request
 		Method    string
@@ -52,12 +57,11 @@ type (
 		// response
 		Status     int
 		HeadersOut map[string]string
-
-		content content
+		content    content
 	}
 )
 
-func NewRequest(c *gin.Context, cfg *configure.Configure) *Request {
+func NewRequest(c *gin.Context, server *HTTPServer) *Request {
 	// request headers
 	request := c.Request
 	headers := map[string]string{}
@@ -72,8 +76,8 @@ func NewRequest(c *gin.Context, cfg *configure.Configure) *Request {
 	}
 
 	return &Request{
-		Context:   c,
-		configure: cfg,
+		Context: c,
+		server:  server,
 
 		Method:    request.Method,
 		Scheme:    request.URL.Scheme,
@@ -141,20 +145,38 @@ func (r *Request) NextHandler() bool {
 func (r *Request) Exit(code int, message ...string) bool {
 	r.Status = code
 	if len(message) > 0 {
-		r.content = &Message{message: strings.Join(message, "")}
+		r.content = &Message{
+			message: strings.Join(message, ""),
+		}
 	}
 	return false
+}
+
+func (r *Request) Logger() *zap.Logger {
+	return r.server.errorLogger
+}
+
+func (r *Request) log() {
+	ctx := r.Context
+	logger := r.server.accessLogger
+
+	logger.Info("",
+		F("remote_address", ctx.RemoteIP()),
+		F("method", r.Method),
+		F("request_uri", ctx.Request.URL.RequestURI()),
+		F("protocol", ctx.Request.Proto),
+		F("status", r.Status),
+		F("user_agent", ctx.Request.UserAgent()))
 }
 
 func (r *Request) Finalize() {
 	ctx := r.Context
 
 	// response status
-	status := 200
-	if r.Status != -1 {
-		status = r.Status
+	if r.Status == -1 {
+		r.Status = 200
 	}
-	ctx.Status(status)
+	ctx.Status(r.Status)
 
 	// response headers
 	for k, v := range r.HeadersOut {
@@ -169,10 +191,13 @@ func (r *Request) Finalize() {
 
 	switch content.(type) {
 	case *Message:
-		ctx.String(status, content.(*Message).message)
+		ctx.String(r.Status, content.(*Message).message)
 	case *JSON:
-		ctx.JSON(status, content.(*JSON).m)
+		ctx.JSON(r.Status, content.(*JSON).m)
 	case *File:
 		ctx.File(content.(*File).filename)
 	}
+
+	// access log
+	r.log()
 }

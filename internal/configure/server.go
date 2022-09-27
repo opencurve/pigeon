@@ -32,6 +32,7 @@ type ServerConfigure struct {
 	ListenPort uint
 	AccessLog  string
 	ErrorLog   string
+	LogLevel   string
 }
 
 func DefaultServer() *ServerConfigure {
@@ -39,9 +40,14 @@ func DefaultServer() *ServerConfigure {
 		Name:       "default",
 		ListenIP:   "0.0.0.0",
 		ListenPort: 8000,
+		AccessLog:  "pigeon_access.log",
+		ErrorLog:   "pigeon_error.log",
+		LogLevel:   "error",
 	}
 }
-
 func (cfg *ServerConfigure) GetListenAddress() string {
 	return fmt.Sprintf("%s:%d", cfg.ListenIP, cfg.ListenPort)
 }
+func (cfg *ServerConfigure) GetAccessLogPath() string { return cfg.AccessLog }
+func (cfg *ServerConfigure) GetErrorLogPath() string  { return cfg.ErrorLog }
+func (cfg *ServerConfigure) GetLogLevel() string  { return cfg.LogLevel }
