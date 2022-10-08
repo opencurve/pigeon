@@ -21,3 +21,90 @@
  */
 
 package utils
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"time"
+)
+
+func FirstOne(name ...string) string {
+	if len(name) == 0 {
+		return ""
+	}
+	return name[0]
+}
+
+func Str2Int(s string) (int, bool) {
+	v, err := strconv.Atoi(s)
+	return v, err == nil
+}
+
+func Str2Bool(s string) (bool, bool) { // value, ok
+	v, err := strconv.ParseBool(s)
+	return v, err == nil
+}
+
+func UnixSec() int64 {
+	return time.Now().UTC().Unix()
+}
+
+func UnixMilli() int64 {
+	return time.Now().UnixNano() / int64(time.Millisecond)
+}
+
+func MakeArgument(args map[string]string) string {
+	out := []string{}
+	for k, v := range args {
+		out = append(out, strings.Join([]string{k, v}, "="))
+	}
+	return strings.Join(out, "&")
+}
+
+func GetBinaryDir() string {
+	ex, err := os.Executable()
+	if err != nil {
+		return "/tmp"
+	}
+	return filepath.Dir(ex)
+}
+
+func Choose(ok bool, first, second string) string {
+	if ok {
+		return first
+	}
+	return second
+}
+
+func FileExist(filepath string) bool {
+	_, err := os.Stat(filepath)
+	return err == nil
+}
+
+func ReadFile(filename string) (string, error) {
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+func WriteFile(filename, data string, mode int) error {
+	file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, os.FileMode(mode))
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	n, err := file.WriteString(data)
+	if err != nil {
+		return err
+	} else if n != len(data) {
+		return fmt.Errorf("write abort")
+	}
+
+	return nil
+}

@@ -24,26 +24,28 @@ package command
 
 import (
 	"fmt"
+	"strconv"
 	"syscall"
 
 	"github.com/opencurve/pigeon/internal/core"
 	cliutils "github.com/opencurve/pigeon/internal/utils"
+	utils "github.com/opencurve/pigeon/internal/utils"
 	"github.com/spf13/cobra"
 )
 
-type stopOptions struct {
+type reloadOptions struct {
 	filename string
 }
 
-func NewStopCommand(pigeon *core.Pigeon) *cobra.Command {
-	var options stopOptions
+func NewReloadCommand(pigeon *core.Pigeon) *cobra.Command {
+	var options reloadOptions
 
 	cmd := &cobra.Command{
-		Use:   "stop",
-		Short: "Stop pigeon",
+		Use:   "reload",
+		Short: "Reload pigeon",
 		Args:  cliutils.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runStop(pigeon, options)
+			return runReload(pigeon, options)
 		},
 		DisableFlagsInUseLine: true,
 	}
@@ -54,10 +56,21 @@ func NewStopCommand(pigeon *core.Pigeon) *cobra.Command {
 	return cmd
 }
 
-func runStop(pigeon *core.Pigeon, options stopOptions) error {
+func getPid(pigeon *core.Pigeon, filename string) (int, error) {
+	cfg, err := parse(pigeon, filename)
+	if err != nil {
+		return 0, err
+	}
+
+	pidfile := cfg.GetPidFile()
+	data, _ := utils.ReadFile(pidfile)
+	return strconv.Atoi(data)
+}
+
+func runReload(pigeon *core.Pigeon, options reloadOptions) error {
 	pid, err := getPid(pigeon, options.filename)
 	if err != nil {
 		return fmt.Errorf("read pid file failed: %s", err)
 	}
-	return syscall.Kill(pid, syscall.SIGTERM)
+	return syscall.Kill(pid, syscall.SIGUSR2)
 }

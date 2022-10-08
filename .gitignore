@@ -1,4 +1,5 @@
 .idea/
 
 bin/
-tests/
+project/cnas/tests/
+project/

@@ -22,4 +22,51 @@
 
 package http
 
-type Proxy struct{}
+import (
+	"net"
+	"net/http"
+	"net/url"
+
+	"github.com/opencurve/pigeon/internal/utils"
+)
+
+type Proxy struct {
+	options PorxyOptions
+}
+
+func NewProxy(options PorxyOptions) *Proxy {
+	return &Proxy{options: options}
+}
+
+func (p *Proxy) makeURL() string {
+	options := p.options
+	return (&url.URL{
+		Scheme:   options.Scheme,
+		Host:     options.Address,
+		RawPath:  options.Uri,
+		RawQuery: utils.MakeArgument(options.Args),
+	}).String()
+}
+
+func (p *Proxy) Do() (*http.Response, error) {
+	options := p.options
+
+	client := &http.Client{
+		Timeout: options.ReadTimeout,
+		Transport: &http.Transport{
+			DialContext: (&net.Dialer{
+				Timeout: options.ConnectTimeout,
+			}).DialContext,
+		},
+	}
+
+	req, err := http.NewRequest(options.Method, p.makeURL(), options.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	for k, v := range options.Headers {
+		req.Header.Set(k, v)
+	}
+	return client.Do(req)
+}

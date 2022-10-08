@@ -25,12 +25,15 @@ package core
 import (
 	"io"
 	"os"
+	"path"
 
-	"github.com/opencurve/pigeon/internal/configure"
 	"github.com/opencurve/pigeon/internal/http"
+	"github.com/opencurve/pigeon/internal/utils"
 )
 
 type Pigeon struct {
+	prefix string
+
 	servers []*http.HTTPServer
 
 	in  io.Reader
@@ -40,6 +43,8 @@ type Pigeon struct {
 
 func NewPigeon(servers []*http.HTTPServer) *Pigeon {
 	return &Pigeon{
+		prefix: utils.GetBinaryDir(),
+
 		servers: servers,
 
 		in:  os.Stdin,
@@ -53,7 +58,6 @@ func (pigeon *Pigeon) In() io.Reader               { return pigeon.in }
 func (pigeon *Pigeon) Out() io.Writer              { return pigeon.out }
 func (pigeon *Pigeon) Err() io.Writer              { return pigeon.err }
 func (pigeon *Pigeon) Servers() []*http.HTTPServer { return pigeon.servers }
-
-func (pigeon *Pigeon) ParseConfigure(filename string) (*configure.Configure, error) {
-	return configure.Parse(filename)
-}
+func (pigeon *Pigeon) SetPrefix(prefix string)     { pigeon.prefix = prefix }
+func (pigeon *Pigeon) GetPrefix() string           { return pigeon.prefix }
+func (pigeon *Pigeon) DefaultConfFile() string     { return path.Join(pigeon.prefix, "conf/pigeon.yaml") }

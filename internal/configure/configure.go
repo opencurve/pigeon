@@ -23,23 +23,40 @@
 package configure
 
 import (
+	"path"
+	"path/filepath"
+
+	"github.com/mcuadros/go-defaults"
 	"github.com/spf13/viper"
 )
 
+type Context struct {
+	Version string
+	Prefix  string
+}
+
 /*
  * global:
- *   prefix: /tmp
+ *   pid: pigeon.pid
  *   access_log: pigeon_access.log
  *   error_log: pigeon_error.log
+ *   log_level: error
+ *   index: html
+ *   proxy_read_timeout: 60
+ *   config:
+ *     enable: true
  *
  * servers:
  *   - name: server1
  *     listen: 127.0.0.1:8000
  *   - name: server2
  *     listen: 127.0.0.1:8001
+ *     config:
+ *       enable: false
  *
  * upstreams:
  *   - name: upstream1
+ *     check_interval: 1
  *     servers:
  *        - 127.0.0.1:9000
  *        - 127.0.0.1:9001
@@ -50,32 +67,62 @@ import (
  */
 type (
 	Global struct {
-		Prefix    string `mapstructure:"prefix"`
-		AccessLog string `mapstructure:"access_log"`
-		ErrorLog  string `mapstructure:"error_log"`
+		PidPath string `mapstructure:"pid" default:"logs/pigeon.pid"`
+
+		AccessLog string `mapstructure:"access_log" default:"logs/pigeon_access.log"`
+		ErrorLog  string `mapstructure:"error_log" default:"logs/pigeon_error.log"`
+		LogLevel  string `mapstructure:"log_level" default:"error"`
+		Index     string `mapstructure:"index" default:"html"`
+
+		ProxyConnectTimeout    int `mapstructure:"proxy_connect_timeout" default:"60"`
+		ProxySendTimeout       int `mapstructure:"proxy_send_timeout" default:"60"`
+		ProxyReadTimeout       int `mapstructure:"proxy_read_timeout" default:"60"`
+		ProxyNextUpstreamTries int `mapstructure:"proxy_next_upstream_tries" default:"0"`
+
+		Config map[string]interface{} `mapstructure:"config"`
 	}
 
 	Server struct {
-		Name      string `mapstructure:"name"`
-		Listen    string `mapstructure:"listen"`
-		AccessLog string `mapstructure:"access_log"`
-		ErrorLog  string `mapstructure:"error_log"`
+		context Context
+
+		Name      string `mapstructure:"name" default:"localhost"`
+		Enable    bool `mapstructure:"enable" default:"true"`
+		Listen    string `mapstructure:"listen" default:"127.0.0.1:8000"`
+		AccessLog string `mapstructure:"access_log" default:"logs/pigeon_access.log"`
+		ErrorLog  string `mapstructure:"error_log" default:"logs/pigeon_error.log"`
+		LogLevel  string `mapstructure:"log_level" default:"error"`
+		Index     string `mapstructure:"index" default:"html"`
+
+		ProxyConnectTimeout    int `mapstructure:"proxy_connect_timeout" default:"60"`
+		ProxySendTimeout       int `mapstructure:"proxy_send_timeout" default:"60"`
+		ProxyReadTimeout       int `mapstructure:"proxy_read_timeout" default:"60"`
+		ProxyNextUpstreamTries int `mapstructure:"proxy_next_upstream_tries" default:"0"`
+
+		Config map[string]interface{} `mapstructure:"config"`
 	}
 
-	Upstream struct {
-		Name    string   `mapstructure:"name"`
-		Servers []string `mapstructure:"servers"`
-	}
+	//Upstream struct {
+	//	Name    string   `mapstructure:"name"`
+	//	Servers []string `mapstructure:"servers"`
+	//}
 
 	Configure struct {
+		context Context
+
 		Global Global `mapstructure:"global"`
 
-		Servers   []Server   `mapstructure:"servers"`
-		Upstreams []Upstream `mapstructure:"upstreams"`
+		Servers []Server `mapstructure:"servers"`
+		//Upstreams []Upstream `mapstructure:"upstreams"`
 	}
 )
 
-func Parse(filename string) (*Configure, error) {
+func Default(ctx Context) *Configure {
+	cfg := &Configure{context: ctx}
+	defaults.SetDefaults(&cfg.Global)
+	return cfg
+}
+
+func Parse(filename string, ctx Context) (*Configure, error) {
 	parser := viper.NewWithOptions(viper.KeyDelimiter("::"))
 	parser.SetConfigFile(filename)
 	parser.SetConfigType("yaml")
@@ -86,5 +133,93 @@ func Parse(filename string) (*Configure, error) {
 
 	cfg := &Configure{}
 	err = parser.Unmarshal(cfg)
-	return cfg, err
+	if err != nil {
+		return nil, err
+	}
+
+	defaults.SetDefaults(&cfg.Global)
+	for i := range cfg.Servers {
+		server := &cfg.Servers[i]
+		cfg.merge(server)
+		server.context = ctx
+		defaults.SetDefaults(server)
+	}
+	return cfg, nil
 }
+
+func newIfNil(config map[string]interface{}) map[string]interface{} {
+	if config == nil {
+		return map[string]interface{}{}
+	}
+	return config
+}
+
+func (cfg *Configure) merge(server *Server) {
+	global := cfg.Global
+	if len(server.AccessLog) == 0 {
+		server.AccessLog = global.AccessLog
+	}
+	if len(server.ErrorLog) == 0 {
+		server.ErrorLog = global.ErrorLog
+	}
+	if len(server.LogLevel) == 0 {
+		server.LogLevel = global.LogLevel
+	}
+	if len(server.Index) == 0 {
+		server.Index = global.Index
+	}
+	if server.ProxyConnectTimeout == 0 {
+		server.ProxyConnectTimeout = global.ProxyConnectTimeout
+	}
+	if server.ProxySendTimeout == 0 {
+		server.ProxySendTimeout = global.ProxySendTimeout
+	}
+	if server.ProxyReadTimeout == 0 {
+		server.ProxyReadTimeout = global.ProxyReadTimeout
+	}
+	if server.ProxyNextUpstreamTries == 0 {
+		server.ProxyNextUpstreamTries = global.ProxyNextUpstreamTries
+	}
+
+	gconfig := newIfNil(global.Config)
+	sconfig := newIfNil(server.Config)
+	for k, v := range gconfig {
+		if sconfig[k] == nil {
+			sconfig[k] = v
+		}
+	}
+	cfg.Global.Config = gconfig
+	server.Config = sconfig
+}
+
+func (cfg *Configure) absPath(filename string) string {
+	if filepath.IsAbs(filename) {
+		return filename
+	}
+	return path.Join(cfg.context.Prefix, filename)
+}
+
+func (cfg *Configure) GetPidFile() string {
+	return cfg.absPath(cfg.Global.PidPath)
+}
+
+func (cfg *Configure) GetErrorLogPath() string {
+	return cfg.absPath(cfg.Global.ErrorLog)
+}
+
+func (cfg *Configure) GetDefaultServer() *ServerConfigure {
+	server := &Server{context: cfg.context}
+	defaults.SetDefaults(server)
+	return server
+}
+
+func (cfg *Configure) GetServer(name string) *ServerConfigure {
+	for _, server := range cfg.Servers {
+		if server.Name == name {
+			return &server
+		}
+	}
+	return nil
+}
+
+//func (cfg *Configure) GetUpstreams() []Upstream { return cfg.Upstreams }

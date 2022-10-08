@@ -16,36 +16,27 @@
 
 /*
  * Project: Pigeon
- * Created Date: 2022-09-21
+ * Created Date: 2022-09-28
  * Author: Jingli Chen (Wine93)
  */
 
-package command
+package http
 
 import (
-	"github.com/opencurve/pigeon/internal/core"
-	cliutils "github.com/opencurve/pigeon/internal/utils"
-	"github.com/spf13/cobra"
+	"github.com/opencurve/pigeon/internal/utils"
 )
 
-type restartOptions struct {
+type Variable struct {
+	StartTime  int64
+	ServerAddr string
+	Index      string
 }
 
-func NewRestartCommand(pigeon *core.Pigeon) *cobra.Command {
-	var options restartOptions
-
-	cmd := &cobra.Command{
-		Use:   "restart",
-		Short: "Restart pigeon",
-		Args:  cliutils.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return runRestart(pigeon, options)
-		},
-		DisableFlagsInUseLine: true,
+func NewVariable(server *HTTPServer) *Variable {
+	cfg := server.cfg
+	return &Variable{
+		StartTime:  utils.UnixMilli(),
+		ServerAddr: cfg.GetListenAddress(),
+		Index:      cfg.GetIndex(),
 	}
-	return cmd
-}
-
-func runRestart(pigeon *core.Pigeon, options restartOptions) error {
-	return nil
 }

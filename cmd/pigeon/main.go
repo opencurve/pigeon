@@ -29,7 +29,7 @@ import (
 func main() {
 	server := pigeon.NewHTTPServer()
 	server.Route("/", func(r *pigeon.Request) bool {
-		return r.Exit(200, "Hello Pigeon\n")
+		return r.Exit(200, "Hello Pigeon")
 	})
 
 	pigeon.Serve(server)

@@ -1,4 +1,4 @@
-.PHONY: build
+.PHONY: build debug test
 
 # go env
 GOPROXY := "https://goproxy.cn,direct"

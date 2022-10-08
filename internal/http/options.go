@@ -22,45 +22,59 @@
 
 package http
 
-const (
-	KB = 1024
-	MB = 1024 * KB
-	GB = 1024 * MB
-)
-
-var (
-	DefaultReadOptions = &ReadOptions{
-		BufferSize: 4 * KB,
-	}
-)
-
-type (
-	ReadOption func(*ReadOptions)
-
-	ReadOptions struct {
-		BufferSize int64
-	}
+import (
+	"io"
+	"time"
 )
 
 type (
 	ProxyOption func(*PorxyOptions)
 
 	PorxyOptions struct {
+		Scheme         string
+		Address        string
+		Method         string
 		Uri            string
 		Args           map[string]string
 		Headers        map[string]string
-		ConnectTimeout uint64 // seconds
+		Body           io.ReadCloser
+		ConnectTimeout time.Duration
+		ReadTimeout    time.Duration
 	}
 )
 
-func (r *Request) WithReadBufferSize(size int64) ReadOption {
-	return func(options *ReadOptions) {
-		options.BufferSize = size
+func (r *Request) WithScheme(scheme string) ProxyOption {
+	return func(options *PorxyOptions) {
+		options.Scheme = scheme
 	}
 }
 
-func (r *Request) WithProxyConnectTimeout(timeout uint64) ProxyOption {
+func (r *Request) WithMethod(method string) ProxyOption {
 	return func(options *PorxyOptions) {
-		options.ConnectTimeout = timeout
+		options.Method = method
+	}
+}
+
+func (r *Request) WithURI(uri string) ProxyOption {
+	return func(options *PorxyOptions) {
+		options.Uri = uri
+	}
+}
+
+func (r *Request) WithArguments(args map[string]string) ProxyOption {
+	return func(options *PorxyOptions) {
+		options.Args = args
+	}
+}
+
+func (r *Request) WithHeaders(headers map[string]string) ProxyOption {
+	return func(options *PorxyOptions) {
+		options.Headers = headers
+	}
+}
+
+func (r *Request) WithBody(body io.ReadCloser) ProxyOption {
+	return func(options *PorxyOptions) {
+		options.Body = body
 	}
 }

@@ -24,35 +24,29 @@ package http
 
 import (
 	"io"
+	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/opencurve/pigeon/internal/utils"
 	"github.com/opencurve/pigeon/pkg/log"
 	"go.uber.org/zap"
 )
-
-var (
-	F = log.Field
-)
-
-type Buffer struct {
-	Data []byte
-	Err  error
-}
 
 type (
 	Request struct {
 		Context *gin.Context
 		server  *HTTPServer
+		Var     *Variable
 
 		// request
-		Method    string
-		Scheme    string
-		Host      string
-		Uri       string
-		Args      map[string]string
-		HeadersIn map[string]string
-		Body      io.ReadCloser
+		Method     string
+		Scheme     string
+		Host       string
+		Uri        string
+		Args       map[string]string
+		HeadersIn  map[string]string
+		BodyReader io.ReadCloser
 
 		// response
 		Status     int
@@ -62,8 +56,10 @@ type (
 )
 
 func NewRequest(c *gin.Context, server *HTTPServer) *Request {
-	// request headers
 	request := c.Request
+	// request scheme
+	scheme := utils.Choose(request.TLS == nil, "http", "https")
+	// request headers
 	headers := map[string]string{}
 	for k := range request.Header {
 		headers[k] = c.GetHeader(k)
@@ -74,52 +70,75 @@ func NewRequest(c *gin.Context, server *HTTPServer) *Request {
 	for key := range values {
 		args[key] = values.Get(key)
 	}
+	// response headers
+	version := server.cfg.GetContext().Version
+	headersOut := map[string]string{
+		"Server": "pigeon/" + version,
+	}
 
 	return &Request{
 		Context: c,
 		server:  server,
 
-		Method:    request.Method,
-		Scheme:    request.URL.Scheme,
-		Host:      request.URL.Host,
-		Uri:       request.RequestURI,
-		Args:      args,
-		HeadersIn: headers,
-		Body:      request.Body,
+		Method:     request.Method,
+		Scheme:     scheme,
+		Host:       request.URL.Host,
+		Uri:        request.URL.RawPath,
+		Args:       args,
+		HeadersIn:  headers,
+		BodyReader: request.Body,
 
 		Status:     -1,
-		HeadersOut: map[string]string{},
+		HeadersOut: headersOut,
+
+		Var: NewVariable(server),
 	}
 }
 
-func (r *Request) ReadBody(opts ...ReadOption) <-chan Buffer {
-	options := DefaultReadOptions
-	for _, opt := range opts {
-		opt(options)
-	}
-
-	ch := make(chan Buffer)
-	go func() {
-		defer close(ch)
-		defer r.Body.Close()
-		buffer := make([]byte, options.BufferSize)
-		for {
-			_, err := r.Body.Read(buffer)
-			ch <- Buffer{Data: buffer, Err: err}
-			if err != nil {
-				break
-			}
-		}
-	}()
-
-	return ch
+func (r *Request) GetURLParam(key string) string {
+	return r.Context.Param(key)
 }
 
-func (r *Request) Bind(any interface{}) error {
+func (r *Request) BindBody(any interface{}) error {
 	return r.Context.ShouldBind(any)
 }
 
-func (r *Request) ProxyPass() bool {
+func (r *Request) BindArgument(any interface{}) error {
+	return r.Context.ShouldBindQuery(any)
+}
+
+func (r *Request) ProxyPass(address string, opts ...ProxyOption) bool {
+	cfg := r.server.cfg
+	options := PorxyOptions{
+		Method:      r.Method,
+		Scheme:      r.Scheme,
+		Address:     address,
+		Uri:         r.Uri,
+		Args:        r.Args,
+		Headers:     r.HeadersIn,
+		Body:        r.BodyReader,
+		ReadTimeout: cfg.GetProxyReadTimeout(),
+	}
+
+	proxy := NewProxy(options)
+	resp, err := proxy.Do()
+	if err != nil {
+		r.Status = http.StatusBadGateway
+		r.Logger().Error("proxy pass failed", log.Field("error", err))
+		return false
+	}
+
+	// handle response
+	r.Status = resp.StatusCode
+	for k, v := range resp.Header {
+		r.HeadersOut[k] = v[0]
+	}
+	r.content = &Reader{
+		reader: resp.Body,
+		size:   resp.ContentLength,
+		ctype:  r.HeadersOut["Content-Type"],
+	}
+
 	return false
 }
 
@@ -159,21 +178,24 @@ func (r *Request) Logger() *zap.Logger {
 func (r *Request) log() {
 	ctx := r.Context
 	logger := r.server.accessLogger
+	requestTime := float64(utils.UnixMilli()-r.Var.StartTime) / 1000
 
 	logger.Info("",
-		F("remote_address", ctx.RemoteIP()),
-		F("method", r.Method),
-		F("request_uri", ctx.Request.URL.RequestURI()),
-		F("protocol", ctx.Request.Proto),
-		F("status", r.Status),
-		F("user_agent", ctx.Request.UserAgent()))
+		log.Field("remote_addr", ctx.RemoteIP()),
+		log.Field("method", ctx.Request.Method),
+		log.Field("request_uri", ctx.Request.URL.RequestURI()),
+		log.Field("protocol", ctx.Request.Proto),
+		log.Field("status", r.Status),
+		log.Field("request_time", requestTime), // seconds
+		log.Field("user_agent", ctx.Request.UserAgent()))
 }
 
 func (r *Request) Finalize() {
+	defer r.log() // access log
 	ctx := r.Context
 
 	// response status
-	if r.Status == -1 {
+	if r.Status < 100 {
 		r.Status = 200
 	}
 	ctx.Status(r.Status)
@@ -186,6 +208,7 @@ func (r *Request) Finalize() {
 	// response body
 	content := r.content
 	if content == nil {
+		r.Logger().Error("nil")
 		return
 	}
 
@@ -196,8 +219,8 @@ func (r *Request) Finalize() {
 		ctx.JSON(r.Status, content.(*JSON).m)
 	case *File:
 		ctx.File(content.(*File).filename)
+	case *Reader:
+		reader := content.(*Reader)
+		ctx.DataFromReader(r.Status, reader.size, reader.ctype, reader.reader, nil)
 	}
-
-	// access log
-	r.log()
 }

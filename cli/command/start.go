@@ -23,16 +23,20 @@
 package command
 
 import (
+	"net/http"
+	"os"
+
+	"github.com/facebookgo/grace/gracehttp"
 	"github.com/opencurve/pigeon/internal/configure"
 	"github.com/opencurve/pigeon/internal/core"
 	cliutils "github.com/opencurve/pigeon/internal/utils"
+	utils "github.com/opencurve/pigeon/internal/utils"
+	daemon "github.com/sevlyar/go-daemon"
 	"github.com/spf13/cobra"
-	"golang.org/x/sync/errgroup"
 )
 
 type startOptions struct {
 	filename string
-	prefix   string
 }
 
 func NewStartCommand(pigeon *core.Pigeon) *cobra.Command {
@@ -49,32 +53,63 @@ func NewStartCommand(pigeon *core.Pigeon) *cobra.Command {
 	}
 
 	flags := cmd.Flags()
-	flags.StringVarP(&options.filename, "conf", "c", "pigeon.yaml", "Specify pigeon configure file")
+	flags.StringVarP(&options.filename, "conf", "c", pigeon.DefaultConfFile(), "Specify pigeon configure file")
 
 	return cmd
 }
 
+func parse(pigeon *core.Pigeon, filename string) (*configure.Configure, error) {
+	ctx := configure.Context{
+		Version: pigeon.Version(),
+		Prefix:  pigeon.GetPrefix(),
+	}
+	if !utils.FileExist(filename) {
+		return configure.Default(ctx), nil
+	}
+	return configure.Parse(filename, ctx)
+}
+
 func runStart(pigeon *core.Pigeon, options startOptions) error {
-	/*
-		cfg, err := pigeon.ParseConfigure(options.filename)
-		if err != nil {
-			return err
-		}
-	*/
-	cfg := &configure.Configure{}
-
-	var g errgroup.Group
-	servers := pigeon.Servers()
-	for _, s := range servers {
-		err := s.Init(cfg)
-		if err != nil {
-			return err
-		}
-
-		g.Go(func() error {
-			return s.Start()
-		})
+	// 1. parse configure file
+	cfg, err := parse(pigeon, options.filename)
+	if err != nil {
+		return err
 	}
 
-	return g.Wait()
+	// 2. start a daemon
+	context := &daemon.Context{
+		LogFileName: cfg.GetErrorLogPath(),
+	}
+	child, _ := context.Reborn()
+	if child != nil { // parent process
+		return nil
+	}
+
+	// 3. write pid to file
+	fi, err := os.OpenFile(cfg.GetPidFile(), os.O_RDWR|os.O_CREATE, 0644)
+	if err != nil {
+		return err
+	}
+	pidFile := daemon.NewLockFile(fi)
+	err = pidFile.WritePid()
+	if err != nil {
+		return err
+	}
+
+	// 4. init server by configure
+	servers := []*http.Server{}
+	for _, server := range pigeon.Servers() {
+		err := server.Init(cfg)
+		if err != nil {
+			return err
+		}
+
+		if !server.Enable() {
+			continue
+		}
+		servers = append(servers, server.Server())
+	}
+
+	// 5. start server in child process
+	return gracehttp.Serve(servers...)
 }

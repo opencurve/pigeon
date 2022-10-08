@@ -1,0 +1,12 @@
+global:
+  access_log: logs/pigeon_access.log
+  error_log: logs/pigeon_error.log
+  pid: logs/pigeon.pid
+  config:
+    user.key: value
+
+servers:
+  - name: server1
+    listen: 127.0.0.1:8000
+  - name: server2
+    listen: 127.0.0.1:8001

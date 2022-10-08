@@ -23,6 +23,8 @@
 package http
 
 import (
+	"io"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -30,20 +32,27 @@ type content interface {
 	data()
 }
 
-type Message struct {
-	message string
-}
+type (
+	Message struct {
+		message string
+	}
+
+	JSON struct {
+		m gin.H
+	}
+
+	File struct {
+		filename string
+	}
+
+	Reader struct {
+		reader io.ReadCloser
+		size   int64
+		ctype  string // Content Type
+	}
+)
 
 func (_ *Message) data() {}
-
-type JSON struct {
-	m gin.H
-}
-
-func (_ *JSON) data() {}
-
-type File struct {
-	filename string
-}
-
-func (_ *File) data() {}
+func (_ *JSON) data()    {}
+func (_ *File) data()    {}
+func (_ *Reader) data()  {}

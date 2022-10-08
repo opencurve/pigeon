@@ -23,31 +23,97 @@
 package configure
 
 import (
-	"fmt"
+	"path"
+	"path/filepath"
+	"time"
+
+	"github.com/opencurve/pigeon/internal/utils"
 )
 
-type ServerConfigure struct {
-	Name       string
-	ListenIP   string
-	ListenPort uint
-	AccessLog  string
-	ErrorLog   string
-	LogLevel   string
+type (
+	ServerConfigure = Server
+
+	ModuleConfig struct {
+		m map[string]interface{}
+	}
+)
+
+func (cfg *ServerConfigure) absPath(filename string) string {
+	if filepath.IsAbs(filename) {
+		return filename
+	}
+	return path.Join(cfg.context.Prefix, filename)
 }
 
-func DefaultServer() *ServerConfigure {
-	return &ServerConfigure{
-		Name:       "default",
-		ListenIP:   "0.0.0.0",
-		ListenPort: 8000,
-		AccessLog:  "pigeon_access.log",
-		ErrorLog:   "pigeon_error.log",
-		LogLevel:   "error",
-	}
+func (cfg *ServerConfigure) GetContext() Context {
+	return cfg.context
 }
+
+func (cfg *ServerConfigure) GetName() string {
+	return cfg.Name
+}
+
+func (cfg *ServerConfigure) GetEnable() bool {
+	return cfg.Enable
+}
+
 func (cfg *ServerConfigure) GetListenAddress() string {
-	return fmt.Sprintf("%s:%d", cfg.ListenIP, cfg.ListenPort)
+	return cfg.Listen
 }
-func (cfg *ServerConfigure) GetAccessLogPath() string { return cfg.AccessLog }
-func (cfg *ServerConfigure) GetErrorLogPath() string  { return cfg.ErrorLog }
-func (cfg *ServerConfigure) GetLogLevel() string  { return cfg.LogLevel }
+
+func (cfg *ServerConfigure) GetAccessLogPath() string {
+	return cfg.absPath(cfg.AccessLog)
+}
+
+func (cfg *ServerConfigure) GetErrorLogPath() string {
+	return cfg.absPath(cfg.ErrorLog)
+}
+
+func (cfg *ServerConfigure) GetLogLevel() string {
+	return cfg.LogLevel
+}
+
+func (cfg *ServerConfigure) GetIndex() string {
+	return cfg.absPath(cfg.Index)
+}
+
+func (cfg *ServerConfigure) GetProxyConnectTimeout() time.Duration {
+	return time.Duration(cfg.ProxyConnectTimeout) * time.Second
+}
+
+func (cfg *ServerConfigure) GetProxySendTimeout() time.Duration {
+	return time.Duration(cfg.ProxySendTimeout) * time.Second
+}
+
+func (cfg *ServerConfigure) GetProxyReadTimeout() time.Duration {
+	return time.Duration(cfg.ProxyReadTimeout) * time.Second
+}
+
+func (cfg *ServerConfigure) GetProxyNextUpstreamTries() int {
+	return cfg.ProxyNextUpstreamTries
+}
+
+func (cfg *ServerConfigure) GetConfig() *ModuleConfig {
+	return &ModuleConfig{m: cfg.Config}
+}
+
+func (cfg *ModuleConfig) GetBool(key string) bool {
+	v, ok := cfg.m[key]
+	if !ok {
+		return false
+	}
+
+	val, ok := utils.Str2Bool(v.(string))
+	if ok {
+		return val
+	}
+	return false
+}
+
+func (cfg ModuleConfig) GetString(key string) string {
+	v, ok := cfg.m[key]
+	if !ok {
+		return ""
+	}
+	return v.(string)
+}

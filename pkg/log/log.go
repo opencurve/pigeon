@@ -44,7 +44,6 @@ func New(level, filename string) (*zap.Logger, error) {
 	return logger, err
 }
 
-
 func Field(key string, val interface{}) zap.Field {
 	switch val.(type) {
 	case bool:
@@ -57,6 +56,8 @@ func Field(key string, val interface{}) zap.Field {
 		return zap.Int(key, val.(int))
 	case int64:
 		return zap.Int64(key, val.(int64))
+	case float64:
+		return zap.Float64(key, val.(float64))
 	case error:
 		return zap.String(key, val.(error).Error())
 	}

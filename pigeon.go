@@ -27,6 +27,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/opencurve/pigeon/cli/command"
+	"github.com/opencurve/pigeon/internal/consts"
 	"github.com/opencurve/pigeon/internal/core"
 	"github.com/opencurve/pigeon/internal/http"
 	"github.com/opencurve/pigeon/pkg/log"
@@ -40,7 +41,15 @@ type (
 
 var (
 	NewHTTPServer = http.NewHTTPServer
-	Field        = log.Field
+	Field         = log.Field
+
+
+	HTTP_METHOD_GET   = consts.HTTP_METHOD_GET
+	HTTP_METHOD_HEAD  = consts.HTTP_METHOD_HEAD
+	HTTP_METHOD_PUT   = consts.HTTP_METHOD_PUT
+	HTTP_METHOD_POST  = consts.HTTP_METHOD_POST
+	HTTP_METHOD_DELETE= consts.HTTP_METHOD_DELETE
+
 )
 
 func Serve(servers ...*HTTPServer) {
