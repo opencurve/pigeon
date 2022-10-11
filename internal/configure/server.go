@@ -97,6 +97,19 @@ func (cfg *ServerConfigure) GetConfig() *ModuleConfig {
 	return &ModuleConfig{m: cfg.Config}
 }
 
+func (cfg *ModuleConfig) GetInt(key string) int {
+	v, ok := cfg.m[key]
+	if !ok {
+		return 0
+	}
+
+	val, ok := utils.Str2Int(v.(string))
+	if ok {
+		return val
+	}
+	return 0
+}
+
 func (cfg *ModuleConfig) GetBool(key string) bool {
 	v, ok := cfg.m[key]
 	if !ok {
@@ -116,4 +129,17 @@ func (cfg ModuleConfig) GetString(key string) string {
 		return ""
 	}
 	return v.(string)
+}
+
+func (cfg ModuleConfig) GetStringArray(key string) []string {
+	v, ok := cfg.m[key]
+	if !ok {
+		return []string{}
+	}
+
+	s, ok := v.([]string)
+	if !ok {
+		return []string{}
+	}
+	return s
 }

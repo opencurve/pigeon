@@ -25,6 +25,7 @@ package utils
 import (
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -90,6 +91,16 @@ func ReadFile(filename string) (string, error) {
 		return "", err
 	}
 	return string(data), nil
+}
+
+func OpenFile(filename string) (*os.File, error) {
+	dir := path.Dir(filename)
+	err := os.MkdirAll(dir, 0644)
+	if err != nil {
+		return nil, err
+	}
+
+	return os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0644)
 }
 
 func WriteFile(filename, data string, mode int) error {

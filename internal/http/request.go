@@ -24,9 +24,11 @@ package http
 
 import (
 	"io"
+	"mime/multipart"
 	"net/http"
 	"strings"
 
+	"github.com/opencurve/pigeon/internal/configure"
 	"github.com/gin-gonic/gin"
 	"github.com/opencurve/pigeon/internal/utils"
 	"github.com/opencurve/pigeon/pkg/log"
@@ -37,6 +39,7 @@ type (
 	Request struct {
 		Context *gin.Context
 		server  *HTTPServer
+		ctx     map[string]interface{}
 		Var     *Variable
 
 		// request
@@ -79,6 +82,8 @@ func NewRequest(c *gin.Context, server *HTTPServer) *Request {
 	return &Request{
 		Context: c,
 		server:  server,
+		ctx:     map[string]interface{}{},
+		Var:     NewVariable(server),
 
 		Method:     request.Method,
 		Scheme:     scheme,
@@ -90,13 +95,35 @@ func NewRequest(c *gin.Context, server *HTTPServer) *Request {
 
 		Status:     -1,
 		HeadersOut: headersOut,
-
-		Var: NewVariable(server),
 	}
+}
+
+func (r *Request) GetConfig() *configure.ModuleConfig {
+	return r.server.cfg.GetConfig()
+}
+
+func (r *Request) SetModuleCtx(name string, ctx interface{}) {
+	r.ctx[name] = ctx
+}
+
+func (r *Request) GetModuleCtx(name string) interface{} {
+	return r.ctx[name]
+}
+
+func (r *Request) NextHandler() bool {
+	return true
 }
 
 func (r *Request) GetURLParam(key string) string {
 	return r.Context.Param(key)
+}
+
+func (r *Request) GetMultipartForm() (*multipart.Form, error) {
+	return r.Context.MultipartForm()
+}
+
+func (r *Request) GetFormFile(key string) (multipart.File, *multipart.FileHeader, error) {
+	return r.Context.Request.FormFile(key)
 }
 
 func (r *Request) BindBody(any interface{}) error {
@@ -147,7 +174,7 @@ func (r *Request) SendString(message string) bool {
 	return false
 }
 
-func (r *Request) SendJSON(m gin.H) bool {
+func (r *Request) SendJSON(m interface{}) bool {
 	r.content = &JSON{m: m}
 	return false
 }
@@ -155,10 +182,6 @@ func (r *Request) SendJSON(m gin.H) bool {
 func (r *Request) SendFile(filename string) bool {
 	r.content = &File{filename: filename}
 	return false
-}
-
-func (r *Request) NextHandler() bool {
-	return true
 }
 
 func (r *Request) Exit(code int, message ...string) bool {

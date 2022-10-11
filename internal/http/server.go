@@ -27,16 +27,20 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/opencurve/pigeon/internal/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/opencurve/pigeon/internal/configure"
+	"github.com/opencurve/pigeon/internal/utils"
 	"github.com/opencurve/pigeon/pkg/log"
 	"go.uber.org/zap"
 )
 
+type InitFunc func(*configure.ServerConfigure) error
+
 type HTTPServer struct {
-	name string
-	cfg  *configure.ServerConfigure
+	name   string
+	cfg    *configure.ServerConfigure
+	initer []InitFunc
+	enable bool
 
 	errorLogger  *zap.Logger
 	accessLogger *zap.Logger
@@ -50,11 +54,21 @@ func NewHTTPServer(name ...string) *HTTPServer {
 	return &HTTPServer{
 		name:   utils.FirstOne(name...),
 		engine: engine,
+		initer: []InitFunc{},
+		enable: true,
 	}
 }
 
 func (s *HTTPServer) Name() string {
 	return s.name
+}
+
+func (s *HTTPServer) Initer(i InitFunc) {
+	s.initer = append(s.initer, i)
+}
+
+func (s *HTTPServer) Enable() bool {
+	return s.enable
 }
 
 func (s *HTTPServer) Logger() *zap.Logger {
@@ -93,8 +107,11 @@ func (s *HTTPServer) Init(cfg *configure.Configure) error {
 	if len(s.name) > 0 {
 		s.cfg = cfg.GetServer(s.name)
 	}
+
 	if s.cfg == nil {
-		return fmt.Errorf("server '%s' not found", s.name)
+		s.enable = false
+		s.Logger().Warn(fmt.Sprintf("server %s not found", s.Name()))
+		return nil
 	}
 
 	// init logger
@@ -109,11 +126,15 @@ func (s *HTTPServer) Init(cfg *configure.Configure) error {
 		return err
 	}
 
-	return nil
-}
+	// invoke initer
+	for _, fn := range s.initer {
+		err = fn(s.cfg)
+		if err != nil {
+			return err
+		}
+	}
 
-func (s *HTTPServer) Enable() bool {
-	return s.cfg.GetEnable()
+	return nil
 }
 
 func (s *HTTPServer) Server() *http.Server {

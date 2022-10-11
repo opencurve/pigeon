@@ -23,9 +23,6 @@
 package command
 
 import (
-	"net/http"
-	"os"
-
 	"github.com/facebookgo/grace/gracehttp"
 	"github.com/opencurve/pigeon/internal/configure"
 	"github.com/opencurve/pigeon/internal/core"
@@ -33,6 +30,7 @@ import (
 	utils "github.com/opencurve/pigeon/internal/utils"
 	daemon "github.com/sevlyar/go-daemon"
 	"github.com/spf13/cobra"
+	"net/http"
 )
 
 type startOptions struct {
@@ -76,7 +74,20 @@ func runStart(pigeon *core.Pigeon, options startOptions) error {
 		return err
 	}
 
-	// 2. start a daemon
+	// 2. init server by configure
+	servers := []*http.Server{}
+	for _, server := range pigeon.Servers() {
+		err := server.Init(cfg)
+		if err != nil {
+			return err
+		}
+
+		if server.Enable() {
+			servers = append(servers, server.Server())
+		}
+	}
+
+	// 3. start a daemon
 	context := &daemon.Context{
 		LogFileName: cfg.GetErrorLogPath(),
 	}
@@ -85,8 +96,8 @@ func runStart(pigeon *core.Pigeon, options startOptions) error {
 		return nil
 	}
 
-	// 3. write pid to file
-	fi, err := os.OpenFile(cfg.GetPidFile(), os.O_RDWR|os.O_CREATE, 0644)
+	// 4. write pid to file
+	fi, err := utils.OpenFile(cfg.GetPidFile())
 	if err != nil {
 		return err
 	}
@@ -94,20 +105,6 @@ func runStart(pigeon *core.Pigeon, options startOptions) error {
 	err = pidFile.WritePid()
 	if err != nil {
 		return err
-	}
-
-	// 4. init server by configure
-	servers := []*http.Server{}
-	for _, server := range pigeon.Servers() {
-		err := server.Init(cfg)
-		if err != nil {
-			return err
-		}
-
-		if !server.Enable() {
-			continue
-		}
-		servers = append(servers, server.Server())
 	}
 
 	// 5. start server in child process

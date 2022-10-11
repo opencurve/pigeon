@@ -24,8 +24,6 @@ package http
 
 import (
 	"io"
-
-	"github.com/gin-gonic/gin"
 )
 
 type content interface {
@@ -38,7 +36,7 @@ type (
 	}
 
 	JSON struct {
-		m gin.H
+		m interface{}
 	}
 
 	File struct {
