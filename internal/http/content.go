@@ -44,9 +44,14 @@ type (
 	}
 
 	Reader struct {
-		reader io.ReadCloser
+		reader io.Reader
 		size   int64
 		ctype  string // Content Type
+	}
+
+	Buffer struct {
+		reader io.Reader
+		size   int64
 	}
 )
 
@@ -54,3 +59,4 @@ func (_ *Message) data() {}
 func (_ *JSON) data()    {}
 func (_ *File) data()    {}
 func (_ *Reader) data()  {}
+func (_ *Buffer) data()  {}

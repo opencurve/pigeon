@@ -95,7 +95,7 @@ func ReadFile(filename string) (string, error) {
 
 func OpenFile(filename string) (*os.File, error) {
 	dir := path.Dir(filename)
-	err := os.MkdirAll(dir, 0644)
+	err := os.MkdirAll(dir, 0755)
 	if err != nil {
 		return nil, err
 	}

@@ -23,13 +23,15 @@
 package http
 
 import (
+	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
+	"strconv"
 	"strings"
 
-	"github.com/opencurve/pigeon/internal/configure"
 	"github.com/gin-gonic/gin"
+	"github.com/opencurve/pigeon/internal/configure"
 	"github.com/opencurve/pigeon/internal/utils"
 	"github.com/opencurve/pigeon/pkg/log"
 	"go.uber.org/zap"
@@ -88,7 +90,7 @@ func NewRequest(c *gin.Context, server *HTTPServer) *Request {
 		Method:     request.Method,
 		Scheme:     scheme,
 		Host:       request.URL.Host,
-		Uri:        request.URL.RawPath,
+		Uri:        request.URL.Path,
 		Args:       args,
 		HeadersIn:  headers,
 		BodyReader: request.Body,
@@ -127,7 +129,8 @@ func (r *Request) GetFormFile(key string) (multipart.File, *multipart.FileHeader
 }
 
 func (r *Request) BindBody(any interface{}) error {
-	return r.Context.ShouldBind(any)
+	c := r.Context
+	return c.ShouldBind(any)
 }
 
 func (r *Request) BindArgument(any interface{}) error {
@@ -145,6 +148,9 @@ func (r *Request) ProxyPass(address string, opts ...ProxyOption) bool {
 		Headers:     r.HeadersIn,
 		Body:        r.BodyReader,
 		ReadTimeout: cfg.GetProxyReadTimeout(),
+	}
+	for _, opt := range opts {
+		opt(&options)
 	}
 
 	proxy := NewProxy(options)
@@ -184,6 +190,25 @@ func (r *Request) SendFile(filename string) bool {
 	return false
 }
 
+func (r *Request) SendBuffer(reader io.Reader, size int64) bool {
+	r.content = &Buffer{reader: reader, size: size}
+	return false
+}
+
+func (r *Request) send(buffer *Buffer) {
+	var err error
+	w := r.Context.Writer
+	if buffer.size > 0 {
+		_, err = io.CopyN(w, buffer.reader, buffer.size)
+	} else {
+		// FIXME: dangerous!!!
+		_, err = io.Copy(w, buffer.reader)
+	}
+	if err != nil && err != io.EOF {
+		panic(err)
+	}
+}
+
 func (r *Request) Exit(code int, message ...string) bool {
 	r.Status = code
 	if len(message) > 0 {
@@ -200,17 +225,17 @@ func (r *Request) Logger() *zap.Logger {
 
 func (r *Request) log() {
 	ctx := r.Context
-	logger := r.server.accessLogger
-	requestTime := float64(utils.UnixMilli()-r.Var.StartTime) / 1000
-
-	logger.Info("",
-		log.Field("remote_addr", ctx.RemoteIP()),
-		log.Field("method", ctx.Request.Method),
-		log.Field("request_uri", ctx.Request.URL.RequestURI()),
-		log.Field("protocol", ctx.Request.Proto),
-		log.Field("status", r.Status),
-		log.Field("request_time", requestTime), // seconds
-		log.Field("user_agent", ctx.Request.UserAgent()))
+	format := []string{
+		ctx.RemoteIP(),
+		ctx.Request.Method,
+		ctx.Request.URL.RequestURI(),
+		ctx.Request.Proto,
+		strconv.Itoa(r.Status),
+		fmt.Sprintf("%.3f", float64(utils.UnixMilli()-r.Var.StartTime)/1000),
+		ctx.Request.UserAgent(),
+		r.Var.LogAttach,
+	}
+	r.server.accessLogger.Info(strings.Join(format, " "))
 }
 
 func (r *Request) Finalize() {
@@ -231,7 +256,6 @@ func (r *Request) Finalize() {
 	// response body
 	content := r.content
 	if content == nil {
-		r.Logger().Error("nil")
 		return
 	}
 
@@ -245,5 +269,8 @@ func (r *Request) Finalize() {
 	case *Reader:
 		reader := content.(*Reader)
 		ctx.DataFromReader(r.Status, reader.size, reader.ctype, reader.reader, nil)
+	case *Buffer:
+		buffer := content.(*Buffer)
+		r.send(buffer)
 	}
 }

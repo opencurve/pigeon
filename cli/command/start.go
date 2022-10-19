@@ -23,6 +23,9 @@
 package command
 
 import (
+	"net/http"
+	"os"
+
 	"github.com/facebookgo/grace/gracehttp"
 	"github.com/opencurve/pigeon/internal/configure"
 	"github.com/opencurve/pigeon/internal/core"
@@ -30,7 +33,6 @@ import (
 	utils "github.com/opencurve/pigeon/internal/utils"
 	daemon "github.com/sevlyar/go-daemon"
 	"github.com/spf13/cobra"
-	"net/http"
 )
 
 type startOptions struct {
@@ -89,15 +91,16 @@ func runStart(pigeon *core.Pigeon, options startOptions) error {
 
 	// 3. start a daemon
 	context := &daemon.Context{
+		PidFileName: cfg.GetPidFile(),
 		LogFileName: cfg.GetErrorLogPath(),
 	}
-	child, _ := context.Reborn()
-	if child != nil { // parent process
+	child, _ := context.Reborn() // NOTE: it will run once
+	if child != nil {            // parent process
 		return nil
 	}
 
 	// 4. write pid to file
-	fi, err := utils.OpenFile(cfg.GetPidFile())
+	fi, err := os.OpenFile(cfg.GetPidFile(), os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		return err
 	}

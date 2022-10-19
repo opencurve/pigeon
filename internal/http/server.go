@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path"
 
 	"github.com/gin-gonic/gin"
 	"github.com/opencurve/pigeon/internal/configure"
@@ -96,10 +97,15 @@ func (s *HTTPServer) initLogger() error {
 	return nil
 }
 
-func (s *HTTPServer) createDir() error {
-	index := s.cfg.GetIndex()
-	s.Logger().Info(fmt.Sprintf("create index directory %s", index))
-	return os.MkdirAll(index, os.ModePerm)
+func (s *HTTPServer) createDir(dirs []string) error {
+	for _, dir := range dirs {
+		err := os.MkdirAll(dir, 0644)
+		if err != nil {
+			s.Logger().Error("create index failed", log.Field("error", err))
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *HTTPServer) Init(cfg *configure.Configure) error {
@@ -110,7 +116,6 @@ func (s *HTTPServer) Init(cfg *configure.Configure) error {
 
 	if s.cfg == nil {
 		s.enable = false
-		s.Logger().Warn(fmt.Sprintf("server %s not found", s.Name()))
 		return nil
 	}
 
@@ -121,7 +126,13 @@ func (s *HTTPServer) Init(cfg *configure.Configure) error {
 	}
 
 	// create directory
-	err = s.createDir()
+	dirs := []string{
+		s.cfg.GetIndex(),
+		path.Dir(cfg.GetPidFile()),
+		path.Dir(s.cfg.GetErrorLogPath()),
+		path.Dir(s.cfg.GetAccessLogPath()),
+	}
+	err = s.createDir(dirs)
 	if err != nil {
 		return err
 	}

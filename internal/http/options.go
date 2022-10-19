@@ -23,7 +23,6 @@
 package http
 
 import (
-	"io"
 	"time"
 )
 
@@ -37,7 +36,7 @@ type (
 		Uri            string
 		Args           map[string]string
 		Headers        map[string]string
-		Body           io.ReadCloser
+		Body           interface{}
 		ConnectTimeout time.Duration
 		ReadTimeout    time.Duration
 	}
@@ -73,7 +72,7 @@ func (r *Request) WithHeaders(headers map[string]string) ProxyOption {
 	}
 }
 
-func (r *Request) WithBody(body io.ReadCloser) ProxyOption {
+func (r *Request) WithBody(body interface{}) ProxyOption {
 	return func(options *PorxyOptions) {
 		options.Body = body
 	}

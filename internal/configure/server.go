@@ -26,8 +26,6 @@ import (
 	"path"
 	"path/filepath"
 	"time"
-
-	"github.com/opencurve/pigeon/internal/utils"
 )
 
 type (
@@ -103,8 +101,8 @@ func (cfg *ModuleConfig) GetInt(key string) int {
 		return 0
 	}
 
-	val, ok := utils.Str2Int(v.(string))
-	if ok {
+	val, yes := v.(int)
+	if yes {
 		return val
 	}
 	return 0
@@ -116,8 +114,8 @@ func (cfg *ModuleConfig) GetBool(key string) bool {
 		return false
 	}
 
-	val, ok := utils.Str2Bool(v.(string))
-	if ok {
+	val, yes := v.(bool)
+	if yes {
 		return val
 	}
 	return false
@@ -128,7 +126,12 @@ func (cfg ModuleConfig) GetString(key string) string {
 	if !ok {
 		return ""
 	}
-	return v.(string)
+
+	val, yes := v.(string)
+	if yes {
+		return val
+	}
+	return ""
 }
 
 func (cfg ModuleConfig) GetStringArray(key string) []string {
@@ -137,9 +140,18 @@ func (cfg ModuleConfig) GetStringArray(key string) []string {
 		return []string{}
 	}
 
-	s, ok := v.([]string)
+	items, ok := v.([]interface{})
 	if !ok {
 		return []string{}
+	}
+
+	s := []string{}
+	for _, item := range items {
+		v, yes := item.(string)
+		if !yes {
+			return []string{}
+		}
+		s = append(s, v)
 	}
 	return s
 }

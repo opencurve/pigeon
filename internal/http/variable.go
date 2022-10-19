@@ -30,6 +30,7 @@ type Variable struct {
 	StartTime  int64
 	ServerAddr string
 	Index      string
+	LogAttach  string
 }
 
 func NewVariable(server *HTTPServer) *Variable {
@@ -38,5 +39,6 @@ func NewVariable(server *HTTPServer) *Variable {
 		StartTime:  utils.UnixMilli(),
 		ServerAddr: cfg.GetListenAddress(),
 		Index:      cfg.GetIndex(),
+		LogAttach: "-",
 	}
 }
