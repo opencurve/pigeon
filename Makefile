@@ -26,6 +26,11 @@ BUILD_FLAGS += -trimpath
 BUILD_FLAGS += -ldflags '$(LDFLAGS)'
 BUILD_FLAGS += $(EXTRA_FLAGS)
 
+# debug flags
+GCFLAGS := "all=-N -l"
+
+DEBUG_FLAGS := -gcflags=$(GCFLAGS)
+
 # test flags
 TEST_FLAGS := -v
 TEST_FLAGS += -p 3
@@ -37,7 +42,7 @@ build:
 	$(GOENV) $(GO) build -o $(OUTPUT) $(BUILD_FLAGS) $(PACKAGES)
 
 debug:
-	$(GOENV) $(GO) build -o $(OUTPUT) $(PACKAGES)
+	$(GOENV) $(GO) build -o $(OUTPUT) $(DEBUG_FLAGS) $(PACKAGES)
 
 test:
 	$(GO) test $(TEST_FLAGS) ./...
