@@ -25,6 +25,7 @@ package configure
 import (
 	"path"
 	"path/filepath"
+	"time"
 
 	"github.com/mcuadros/go-defaults"
 	"github.com/spf13/viper"
@@ -42,7 +43,12 @@ type Context struct {
  *   error_log: pigeon_error.log
  *   log_level: error
  *   index: html
+ *   multipart_max_memory: 8388608
+ *   multipart_temp_path: /dev/shm
+ *   proxy_connect_timeout: 3
+ *   proxy_send_timeout: 60
  *   proxy_read_timeout: 60
+ *   proxy_next_upstream_tries: 0
  *   config:
  *     enable: true
  *
@@ -67,14 +73,19 @@ type Context struct {
  */
 type (
 	Global struct {
-		PidPath string `mapstructure:"pid" default:"logs/pigeon.pid"`
+		PidPath      string `mapstructure:"pid" default:"logs/pigeon.pid"`
+		CloseTimeout int64  `mapstructure:"close_timeout" default:"60"`
+		AbortTimeout int64  `mapstructure:"abort_timeout" default:"60"`
 
 		AccessLog string `mapstructure:"access_log" default:"logs/pigeon_access.log"`
 		ErrorLog  string `mapstructure:"error_log" default:"logs/pigeon_error.log"`
 		LogLevel  string `mapstructure:"log_level" default:"error"`
 		Index     string `mapstructure:"index" default:"html"`
 
-		ProxyConnectTimeout    int `mapstructure:"proxy_connect_timeout" default:"60"`
+		MultipartMaxMemory int64  `mapstructure:"multipart_max_memory" default:"1048576"`
+		MultipartTempPath  string `mapstructure:"multipart_temp_path" default:"/tmp"`
+
+		ProxyConnectTimeout    int `mapstructure:"proxy_connect_timeout" default:"3"`
 		ProxySendTimeout       int `mapstructure:"proxy_send_timeout" default:"60"`
 		ProxyReadTimeout       int `mapstructure:"proxy_read_timeout" default:"60"`
 		ProxyNextUpstreamTries int `mapstructure:"proxy_next_upstream_tries" default:"0"`
@@ -86,14 +97,17 @@ type (
 		context Context
 
 		Name      string `mapstructure:"name" default:"localhost"`
-		Enable    bool `mapstructure:"enable" default:"true"`
+		Enable    bool   `mapstructure:"enable" default:"true"`
 		Listen    string `mapstructure:"listen" default:"127.0.0.1:8000"`
 		AccessLog string `mapstructure:"access_log" default:"logs/pigeon_access.log"`
 		ErrorLog  string `mapstructure:"error_log" default:"logs/pigeon_error.log"`
 		LogLevel  string `mapstructure:"log_level" default:"error"`
 		Index     string `mapstructure:"index" default:"html"`
 
-		ProxyConnectTimeout    int `mapstructure:"proxy_connect_timeout" default:"60"`
+		MultipartMaxMemory int64  `mapstructure:"multipart_max_memory" default:"1048576"`
+		MultipartTempPath  string `mapstructure:"multipart_temp_path" default:"/tmp"`
+
+		ProxyConnectTimeout    int `mapstructure:"proxy_connect_timeout" default:"3"`
 		ProxySendTimeout       int `mapstructure:"proxy_send_timeout" default:"60"`
 		ProxyReadTimeout       int `mapstructure:"proxy_read_timeout" default:"60"`
 		ProxyNextUpstreamTries int `mapstructure:"proxy_next_upstream_tries" default:"0"`
@@ -101,10 +115,10 @@ type (
 		Config map[string]interface{} `mapstructure:"config"`
 	}
 
-	//Upstream struct {
-	//	Name    string   `mapstructure:"name"`
-	//	Servers []string `mapstructure:"servers"`
-	//}
+	Upstream struct {
+		Name    string   `mapstructure:"name"`
+		Servers []string `mapstructure:"servers"`
+	}
 
 	Configure struct {
 		context Context
@@ -112,7 +126,8 @@ type (
 		Global Global `mapstructure:"global"`
 
 		Servers []Server `mapstructure:"servers"`
-		//Upstreams []Upstream `mapstructure:"upstreams"`
+
+		Upstreams []Upstream `mapstructure:"upstreams"`
 	}
 )
 
@@ -131,7 +146,7 @@ func Parse(filename string, ctx Context) (*Configure, error) {
 		return nil, err
 	}
 
-	cfg := &Configure{context:ctx}
+	cfg := &Configure{context: ctx}
 	err = parser.Unmarshal(cfg)
 	if err != nil {
 		return nil, err
@@ -168,6 +183,12 @@ func (cfg *Configure) merge(server *Server) {
 	if len(server.Index) == 0 {
 		server.Index = global.Index
 	}
+	if server.MultipartMaxMemory == 0 {
+		server.MultipartMaxMemory = global.MultipartMaxMemory
+	}
+	if len(server.MultipartTempPath) == 0 {
+		server.MultipartTempPath = global.MultipartTempPath
+	}
 	if server.ProxyConnectTimeout == 0 {
 		server.ProxyConnectTimeout = global.ProxyConnectTimeout
 	}
@@ -203,6 +224,14 @@ func (cfg *Configure) GetPidFile() string {
 	return cfg.absPath(cfg.Global.PidPath)
 }
 
+func (cfg *Configure) GetCloseTimeout() time.Duration {
+	return time.Duration(cfg.Global.CloseTimeout) * time.Second
+}
+
+func (cfg *Configure) GetAbortTimeout() time.Duration {
+	return time.Duration(cfg.Global.AbortTimeout) * time.Second
+}
+
 func (cfg *Configure) GetErrorLogPath() string {
 	return cfg.absPath(cfg.Global.ErrorLog)
 }
@@ -222,4 +251,6 @@ func (cfg *Configure) GetServer(name string) *ServerConfigure {
 	return nil
 }
 
-//func (cfg *Configure) GetUpstreams() []Upstream { return cfg.Upstreams }
+func (cfg *Configure) GetUpstreams() []Upstream {
+	return cfg.Upstreams
+}

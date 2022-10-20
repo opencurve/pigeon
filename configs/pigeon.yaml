@@ -1,12 +1,20 @@
 global:
+  pid: logs/pigeon.pid # only global
+  close_timeout: 60    # only global
+  abort_timeout: 60    # only global
   access_log: logs/pigeon_access.log
   error_log: logs/pigeon_error.log
-  pid: logs/pigeon.pid
-  config:
-    user.key: value
+  log_level: info
+  index: html
+  multipart_max_memory: 8388608
+  multipart_temp_path: /dev/shm
+  proxy_connect_timeout: 3
+  proxy_send_timeout: 60
+  proxy_read_timeout: 60
+  proxy_next_upstream_tries: 0
 
 servers:
   - name: server1
     listen: 127.0.0.1:8000
-  - name: server2
-    listen: 127.0.0.1:8001
+    config:
+      key: value

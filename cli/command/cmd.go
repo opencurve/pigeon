@@ -34,9 +34,9 @@ type rootOptions struct{}
 
 func addSubCommands(cmd *cobra.Command, pigeon *core.Pigeon) {
 	cmd.AddCommand(
-		NewStartCommand(pigeon), // pigeon start
-		NewStopCommand(pigeon),  // pigeon stop
-		NewReloadCommand(pigeon),             // pigeon restart
+		NewStartCommand(pigeon),  // pigeon start
+		NewStopCommand(pigeon),   // pigeon stop
+		NewReloadCommand(pigeon), // pigeon restart
 	)
 }
 

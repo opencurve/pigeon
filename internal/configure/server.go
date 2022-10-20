@@ -43,41 +43,20 @@ func (cfg *ServerConfigure) absPath(filename string) string {
 	return path.Join(cfg.context.Prefix, filename)
 }
 
-func (cfg *ServerConfigure) GetContext() Context {
-	return cfg.context
-}
+func (cfg *ServerConfigure) GetContext() Context            { return cfg.context }
+func (cfg *ServerConfigure) GetName() string                { return cfg.Name }
+func (cfg *ServerConfigure) GetEnable() bool                { return cfg.Enable }
+func (cfg *ServerConfigure) GetListenAddress() string       { return cfg.Listen }
+func (cfg *ServerConfigure) GetAccessLogPath() string       { return cfg.absPath(cfg.AccessLog) }
+func (cfg *ServerConfigure) GetErrorLogPath() string        { return cfg.absPath(cfg.ErrorLog) }
+func (cfg *ServerConfigure) GetLogLevel() string            { return cfg.LogLevel }
+func (cfg *ServerConfigure) GetIndex() string               { return cfg.absPath(cfg.Index) }
+func (cfg *ServerConfigure) GetMultipartMaxMemory() int64   { return cfg.MultipartMaxMemory }
+func (cfg *ServerConfigure) GetMultipartTempPath() string   { return cfg.MultipartTempPath }
+func (cfg *ServerConfigure) GetProxyNextUpstreamTries() int { return cfg.ProxyNextUpstreamTries }
+func (cfg *ServerConfigure) GetConfig() *ModuleConfig       { return &ModuleConfig{m: cfg.Config} }
 
-func (cfg *ServerConfigure) GetName() string {
-	return cfg.Name
-}
-
-func (cfg *ServerConfigure) GetEnable() bool {
-	return cfg.Enable
-}
-
-func (cfg *ServerConfigure) GetListenAddress() string {
-	return cfg.Listen
-}
-
-func (cfg *ServerConfigure) GetAccessLogPath() string {
-	return cfg.absPath(cfg.AccessLog)
-}
-
-func (cfg *ServerConfigure) GetErrorLogPath() string {
-	return cfg.absPath(cfg.ErrorLog)
-}
-
-func (cfg *ServerConfigure) GetLogLevel() string {
-	return cfg.LogLevel
-}
-
-func (cfg *ServerConfigure) GetIndex() string {
-	return cfg.absPath(cfg.Index)
-}
-
-func (cfg *ServerConfigure) GetProxyConnectTimeout() time.Duration {
-	return time.Duration(cfg.ProxyConnectTimeout) * time.Second
-}
+func (cfg *ServerConfigure) GetProxyConnectTimeout() time.Duration { return time.Duration(cfg.ProxyConnectTimeout) * time.Second }
 
 func (cfg *ServerConfigure) GetProxySendTimeout() time.Duration {
 	return time.Duration(cfg.ProxySendTimeout) * time.Second
@@ -85,14 +64,6 @@ func (cfg *ServerConfigure) GetProxySendTimeout() time.Duration {
 
 func (cfg *ServerConfigure) GetProxyReadTimeout() time.Duration {
 	return time.Duration(cfg.ProxyReadTimeout) * time.Second
-}
-
-func (cfg *ServerConfigure) GetProxyNextUpstreamTries() int {
-	return cfg.ProxyNextUpstreamTries
-}
-
-func (cfg *ServerConfigure) GetConfig() *ModuleConfig {
-	return &ModuleConfig{m: cfg.Config}
 }
 
 func (cfg *ModuleConfig) GetInt(key string) int {

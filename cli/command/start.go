@@ -26,7 +26,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/facebookgo/grace/gracehttp"
+	"github.com/Wine93/grace/gracehttp"
 	"github.com/opencurve/pigeon/internal/configure"
 	"github.com/opencurve/pigeon/internal/core"
 	cliutils "github.com/opencurve/pigeon/internal/utils"
@@ -94,7 +94,7 @@ func runStart(pigeon *core.Pigeon, options startOptions) error {
 		PidFileName: cfg.GetPidFile(),
 		LogFileName: cfg.GetErrorLogPath(),
 	}
-	child, _ := context.Reborn() // NOTE: it will run once
+	child, _ := context.Reborn() // NOTE: it only run once
 	if child != nil {            // parent process
 		return nil
 	}
@@ -111,5 +111,7 @@ func runStart(pigeon *core.Pigeon, options startOptions) error {
 	}
 
 	// 5. start server in child process
-	return gracehttp.Serve(servers...)
+	return gracehttp.ServeWithOptions(servers,
+		gracehttp.StopTimeout(cfg.GetCloseTimeout()),
+		gracehttp.KillTimeout(cfg.GetAbortTimeout()))
 }

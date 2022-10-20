@@ -137,6 +137,10 @@ func (s *HTTPServer) Init(cfg *configure.Configure) error {
 		return err
 	}
 
+	// configure server
+	s.engine.MaxMultipartMemory = s.cfg.GetMultipartMaxMemory()
+	os.Setenv("TMPDIR", s.cfg.GetMultipartTempPath())
+
 	// invoke initer
 	for _, fn := range s.initer {
 		err = fn(s.cfg)

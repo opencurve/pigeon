@@ -57,7 +57,7 @@ func NewStopCommand(pigeon *core.Pigeon) *cobra.Command {
 func runStop(pigeon *core.Pigeon, options stopOptions) error {
 	pid, err := getPid(pigeon, options.filename)
 	if err != nil {
-		return fmt.Errorf("read pid file failed: %s", err)
+		return fmt.Errorf("read pid file failed: %v", err)
 	}
 	return syscall.Kill(pid, syscall.SIGTERM)
 }

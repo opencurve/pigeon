@@ -70,7 +70,7 @@ func getPid(pigeon *core.Pigeon, filename string) (int, error) {
 func runReload(pigeon *core.Pigeon, options reloadOptions) error {
 	pid, err := getPid(pigeon, options.filename)
 	if err != nil {
-		return fmt.Errorf("read pid file failed: %s", err)
+		return fmt.Errorf("read pid file failed: %v", err)
 	}
 	return syscall.Kill(pid, syscall.SIGUSR2)
 }
