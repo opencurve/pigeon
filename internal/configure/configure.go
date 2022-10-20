@@ -131,7 +131,7 @@ func Parse(filename string, ctx Context) (*Configure, error) {
 		return nil, err
 	}
 
-	cfg := &Configure{}
+	cfg := &Configure{context:ctx}
 	err = parser.Unmarshal(cfg)
 	if err != nil {
 		return nil, err
