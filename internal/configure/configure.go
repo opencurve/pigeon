@@ -98,7 +98,7 @@ type (
 
 		Name      string `mapstructure:"name" default:"localhost"`
 		Enable    bool   `mapstructure:"enable" default:"true"`
-		Listen    string `mapstructure:"listen" default:"127.0.0.1:8000"`
+		Listen    string `mapstructure:"listen" default:":8000"`
 		AccessLog string `mapstructure:"access_log" default:"logs/pigeon_access.log"`
 		ErrorLog  string `mapstructure:"error_log" default:"logs/pigeon_error.log"`
 		LogLevel  string `mapstructure:"log_level" default:"error"`
