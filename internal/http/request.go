@@ -49,6 +49,7 @@ type (
 		Scheme     string
 		Host       string
 		Uri        string
+		RawArgs    string
 		Args       map[string]string
 		HeadersIn  map[string]string
 		BodyReader io.ReadCloser
@@ -91,6 +92,7 @@ func NewRequest(c *gin.Context, server *HTTPServer) *Request {
 		Scheme:     scheme,
 		Host:       request.URL.Host,
 		Uri:        request.URL.Path,
+		RawArgs:    request.URL.RawQuery,
 		Args:       args,
 		HeadersIn:  headers,
 		BodyReader: request.Body,
