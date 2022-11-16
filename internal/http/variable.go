@@ -23,22 +23,27 @@
 package http
 
 import (
+	"github.com/gin-gonic/gin"
 	"github.com/opencurve/pigeon/internal/utils"
 )
 
 type Variable struct {
+	RemoteAddr string
 	StartTime  int64
 	ServerAddr string
 	Index      string
+	RequestURI string
 	LogAttach  string
 }
 
-func NewVariable(server *HTTPServer) *Variable {
+func NewVariable(server *HTTPServer, ctx *gin.Context) *Variable {
 	cfg := server.cfg
 	return &Variable{
+		RemoteAddr: ctx.RemoteIP(),
 		StartTime:  utils.UnixMilli(),
 		ServerAddr: cfg.GetListenAddress(),
+		RequestURI: ctx.Request.URL.RequestURI(),
 		Index:      cfg.GetIndex(),
-		LogAttach: "-",
+		LogAttach:  "-",
 	}
 }

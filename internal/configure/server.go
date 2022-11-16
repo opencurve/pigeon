@@ -56,7 +56,9 @@ func (cfg *ServerConfigure) GetMultipartTempPath() string   { return cfg.Multipa
 func (cfg *ServerConfigure) GetProxyNextUpstreamTries() int { return cfg.ProxyNextUpstreamTries }
 func (cfg *ServerConfigure) GetConfig() *ModuleConfig       { return &ModuleConfig{m: cfg.Config} }
 
-func (cfg *ServerConfigure) GetProxyConnectTimeout() time.Duration { return time.Duration(cfg.ProxyConnectTimeout) * time.Second }
+func (cfg *ServerConfigure) GetProxyConnectTimeout() time.Duration {
+	return time.Duration(cfg.ProxyConnectTimeout) * time.Second
+}
 
 func (cfg *ServerConfigure) GetProxySendTimeout() time.Duration {
 	return time.Duration(cfg.ProxySendTimeout) * time.Second

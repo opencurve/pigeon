@@ -55,9 +55,11 @@ type (
 		BodyReader io.ReadCloser
 
 		// response
-		Status     int
-		HeadersOut map[string]string
-		content    content
+		Status      int
+		HeadersOut  map[string]string
+		content     content
+		headersSent bool
+		bodySent    bool
 	}
 )
 
@@ -86,7 +88,7 @@ func NewRequest(c *gin.Context, server *HTTPServer) *Request {
 		Context: c,
 		server:  server,
 		ctx:     map[string]interface{}{},
-		Var:     NewVariable(server),
+		Var:     NewVariable(server, c),
 
 		Method:     request.Method,
 		Scheme:     scheme,
@@ -97,8 +99,10 @@ func NewRequest(c *gin.Context, server *HTTPServer) *Request {
 		HeadersIn:  headers,
 		BodyReader: request.Body,
 
-		Status:     -1,
-		HeadersOut: headersOut,
+		Status:      -1,
+		HeadersOut:  headersOut,
+		headersSent: false,
+		bodySent:    false,
 	}
 }
 
@@ -196,6 +200,9 @@ func (r *Request) SendBuffer(reader io.Reader, size int64) bool {
 	r.content = &Buffer{reader: reader, size: size}
 	return false
 }
+func (r *Request) ResponseWriter() gin.ResponseWriter {
+	return r.Context.Writer
+}
 
 func (r *Request) send(buffer *Buffer) {
 	var err error
@@ -240,11 +247,13 @@ func (r *Request) log() {
 	r.server.accessLogger.Info(strings.Join(format, " "))
 }
 
-func (r *Request) Finalize() {
-	defer r.log() // access log
-	ctx := r.Context
+func (r *Request) SendHeaders() {
+	if r.headersSent {
+		return
+	}
+	defer func() { r.headersSent = true }()
 
-	// response status
+	ctx := r.Context
 	if r.Status < 100 {
 		r.Status = 200
 	}
@@ -254,8 +263,15 @@ func (r *Request) Finalize() {
 	for k, v := range r.HeadersOut {
 		ctx.Header(k, v)
 	}
+}
 
-	// response body
+func (r *Request) SendBody() {
+	if r.bodySent {
+		return
+	}
+	defer func() { r.bodySent = true }()
+
+	ctx := r.Context
 	content := r.content
 	if content == nil {
 		return
@@ -275,4 +291,10 @@ func (r *Request) Finalize() {
 		buffer := content.(*Buffer)
 		r.send(buffer)
 	}
+}
+
+func (r *Request) Finalize() {
+	defer r.log() // access log
+	r.SendHeaders()
+	r.SendBody()
 }

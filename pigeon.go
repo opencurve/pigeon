@@ -32,6 +32,7 @@ import (
 	"github.com/opencurve/pigeon/internal/core"
 	"github.com/opencurve/pigeon/internal/http"
 	"github.com/opencurve/pigeon/pkg/log"
+	"go.uber.org/zap"
 )
 
 type (
@@ -39,6 +40,7 @@ type (
 	HTTPServer = http.HTTPServer
 	Configure  = configure.ServerConfigure
 	JSON       = gin.H
+	Logger     = zap.Logger
 )
 
 var (
