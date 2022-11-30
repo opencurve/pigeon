@@ -112,6 +112,9 @@ type (
 		ProxyReadTimeout       int `mapstructure:"proxy_read_timeout" default:"60"`
 		ProxyNextUpstreamTries int `mapstructure:"proxy_next_upstream_tries" default:"0"`
 
+		PProfEnable bool   `mapstructure:"pprof_enable" default:"false"`
+		PProfPrefix string `mapstructure:"pprof_prefix" default:"/debug/pprof"`
+
 		Config map[string]interface{} `mapstructure:"config"`
 	}
 

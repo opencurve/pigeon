@@ -25,6 +25,7 @@ package http
 import (
 	"fmt"
 	"net/http"
+	"net/http/pprof"
 	"os"
 	"path"
 
@@ -108,6 +109,30 @@ func (s *HTTPServer) createDir(dirs []string) error {
 	return nil
 }
 
+func (s *HTTPServer) routePProf() {
+	if !s.cfg.GetPProfEnable() {
+		return
+	}
+
+	prefix := s.cfg.GetPProfPrefix()
+	s.errorLogger.Info("enable pprof, prefix=" + prefix)
+	group := (&s.engine.RouterGroup).Group(prefix)
+	{
+		group.GET("/", gin.WrapF(pprof.Index))
+		group.GET("/cmdline", gin.WrapF(pprof.Cmdline))
+		group.GET("/profile", gin.WrapF(pprof.Profile))
+		group.POST("/symbol", gin.WrapF(pprof.Symbol))
+		group.GET("/symbol", gin.WrapF(pprof.Symbol))
+		group.GET("/trace", gin.WrapF(pprof.Trace))
+		group.GET("/allocs", gin.WrapH(pprof.Handler("allocs")))
+		group.GET("/block", gin.WrapH(pprof.Handler("block")))
+		group.GET("/goroutine", gin.WrapH(pprof.Handler("goroutine")))
+		group.GET("/heap", gin.WrapH(pprof.Handler("heap")))
+		group.GET("/mutex", gin.WrapH(pprof.Handler("mutex")))
+		group.GET("/threadcreate", gin.WrapH(pprof.Handler("threadcreate")))
+	}
+}
+
 func (s *HTTPServer) Init(cfg *configure.Configure) error {
 	s.cfg = cfg.GetDefaultServer()
 	if len(s.name) > 0 {
@@ -140,6 +165,9 @@ func (s *HTTPServer) Init(cfg *configure.Configure) error {
 	// configure server
 	s.engine.MaxMultipartMemory = s.cfg.GetMultipartMaxMemory()
 	os.Setenv("TMPDIR", s.cfg.GetMultipartTempPath())
+
+	// add router to pprof
+	s.routePProf()
 
 	// invoke initer
 	for _, fn := range s.initer {

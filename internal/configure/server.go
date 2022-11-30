@@ -54,6 +54,8 @@ func (cfg *ServerConfigure) GetIndex() string               { return cfg.absPath
 func (cfg *ServerConfigure) GetMultipartMaxMemory() int64   { return cfg.MultipartMaxMemory }
 func (cfg *ServerConfigure) GetMultipartTempPath() string   { return cfg.MultipartTempPath }
 func (cfg *ServerConfigure) GetProxyNextUpstreamTries() int { return cfg.ProxyNextUpstreamTries }
+func (cfg *ServerConfigure) GetPProfEnable() bool           { return cfg.PProfEnable }
+func (cfg *ServerConfigure) GetPProfPrefix() string         { return cfg.PProfPrefix }
 func (cfg *ServerConfigure) GetConfig() *ModuleConfig       { return &ModuleConfig{m: cfg.Config} }
 
 func (cfg *ServerConfigure) GetProxyConnectTimeout() time.Duration {
