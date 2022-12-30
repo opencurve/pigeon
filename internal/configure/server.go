@@ -56,6 +56,9 @@ func (cfg *ServerConfigure) GetMultipartTempPath() string   { return cfg.Multipa
 func (cfg *ServerConfigure) GetProxyNextUpstreamTries() int { return cfg.ProxyNextUpstreamTries }
 func (cfg *ServerConfigure) GetPProfEnable() bool           { return cfg.PProfEnable }
 func (cfg *ServerConfigure) GetPProfPrefix() string         { return cfg.PProfPrefix }
+func (cfg *ServerConfigure) GetEnableTls() bool             { return cfg.EnableTls }
+func (cfg *ServerConfigure) GetTlsCertFile() string         { return cfg.TlsCertFile }
+func (cfg *ServerConfigure) GetTlsKeyFile() string          { return cfg.TlsKeyFile }
 func (cfg *ServerConfigure) GetConfig() *ModuleConfig       { return &ModuleConfig{m: cfg.Config} }
 
 func (cfg *ServerConfigure) GetProxyConnectTimeout() time.Duration {

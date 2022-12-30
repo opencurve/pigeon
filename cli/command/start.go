@@ -85,7 +85,11 @@ func runStart(pigeon *core.Pigeon, options startOptions) error {
 		}
 
 		if server.Enable() {
-			servers = append(servers, server.Server())
+			s, e := server.Server()
+			if e != nil {
+				return e
+			}
+			servers = append(servers, s)
 		}
 	}
 

@@ -16,5 +16,8 @@ global:
 servers:
   - name: server1
     listen: 127.0.0.1:8000
+    enable_tls: false
+    tls_cert_file: cert/server.crt
+    tls_key_file: cert/server.key
     config:
       key: value

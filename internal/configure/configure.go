@@ -115,6 +115,10 @@ type (
 		PProfEnable bool   `mapstructure:"pprof_enable" default:"false"`
 		PProfPrefix string `mapstructure:"pprof_prefix" default:"/debug/pprof"`
 
+		EnableTls   bool   `mapstructure:"enable_tls" default:"false"`
+		TlsCertFile string `mapstructure:"tls_cert_file" default:"cert/server.crt"`
+		TlsKeyFile  string `mapstructure:"tls_key_file" default:"cert/server.key"`
+
 		Config map[string]interface{} `mapstructure:"config"`
 	}
 

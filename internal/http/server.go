@@ -23,6 +23,7 @@
 package http
 
 import (
+	"crypto/tls"
 	"fmt"
 	"net/http"
 	"net/http/pprof"
@@ -47,6 +48,7 @@ type HTTPServer struct {
 	errorLogger  *zap.Logger
 	accessLogger *zap.Logger
 	engine       *gin.Engine
+	tlsConfig    *tls.Config
 }
 
 func NewHTTPServer(name ...string) *HTTPServer {
@@ -169,6 +171,17 @@ func (s *HTTPServer) Init(cfg *configure.Configure) error {
 	// add router to pprof
 	s.routePProf()
 
+	// config tls
+	if s.cfg.GetEnableTls() {
+		cert := s.cfg.GetTlsCertFile()
+		key := s.cfg.GetTlsKeyFile()
+		cer, err := tls.LoadX509KeyPair(cert, key)
+		if err != nil {
+			return err
+		}
+		s.tlsConfig = &tls.Config{Certificates: []tls.Certificate{cer}}
+	}
+
 	// invoke initer
 	for _, fn := range s.initer {
 		err = fn(s.cfg)
@@ -180,13 +193,15 @@ func (s *HTTPServer) Init(cfg *configure.Configure) error {
 	return nil
 }
 
-func (s *HTTPServer) Server() *http.Server {
+func (s *HTTPServer) Server() (*http.Server, error) {
 	s.Logger().Info(fmt.Sprintf("ready to start server %s: %s",
 		s.Name(), s.cfg.GetListenAddress()))
-	return &http.Server{
+	server := http.Server{
 		Addr:    s.cfg.GetListenAddress(),
 		Handler: s.engine,
+		TLSConfig: s.tlsConfig,
 	}
+	return &server, nil
 }
 
 func (s *HTTPServer) Route(relativePath string, handlers ...HandlerFunc) {
