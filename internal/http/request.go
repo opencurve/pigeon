@@ -150,7 +150,7 @@ func (r *Request) ProxyPass(address string, opts ...ProxyOption) bool {
 		Scheme:      r.Scheme,
 		Address:     address,
 		Uri:         r.Uri,
-		Args:        r.Args,
+		Args:        r.RawArgs,
 		Headers:     r.HeadersIn,
 		Body:        r.BodyReader,
 		ReadTimeout: cfg.GetProxyReadTimeout(),

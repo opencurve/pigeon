@@ -27,7 +27,6 @@ import (
 	"net/url"
 
 	"github.com/imroc/req/v3"
-	"github.com/opencurve/pigeon/internal/utils"
 )
 
 var (
@@ -52,7 +51,7 @@ func (p *Proxy) makeURL() string {
 		Scheme:   options.Scheme,
 		Host:     options.Address,
 		Path:     options.Uri,
-		RawQuery: utils.MakeArgument(options.Args),
+		RawQuery: options.Args,
 	}).String()
 }
 

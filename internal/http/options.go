@@ -34,7 +34,7 @@ type (
 		Address        string
 		Method         string
 		Uri            string
-		Args           map[string]string
+		Args           string
 		Headers        map[string]string
 		Body           interface{}
 		ConnectTimeout time.Duration
@@ -60,7 +60,7 @@ func (r *Request) WithURI(uri string) ProxyOption {
 	}
 }
 
-func (r *Request) WithArguments(args map[string]string) ProxyOption {
+func (r *Request) WithArgs(args string) ProxyOption {
 	return func(options *PorxyOptions) {
 		options.Args = args
 	}
