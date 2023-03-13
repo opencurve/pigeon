@@ -60,6 +60,12 @@ func Field(key string, val interface{}) zap.Field {
 		return zap.Float64(key, val.(float64))
 	case error:
 		return zap.String(key, val.(error).Error())
+	case uint16:
+		return zap.Uint16(key, val.(uint16))
+	case uint32:
+		return zap.Uint32(key, val.(uint32))
+	case uint64:
+		return zap.Uint64(key, val.(uint64))
 	}
 	return zap.Skip()
 }
