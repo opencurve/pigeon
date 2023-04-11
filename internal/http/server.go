@@ -42,13 +42,13 @@ type InitFunc func(*configure.ServerConfigure) error
 type HTTPServer struct {
 	name   string
 	cfg    *configure.ServerConfigure
+	tlsCfg *tls.Config
 	initer []InitFunc
 	enable bool
 
 	errorLogger  *zap.Logger
 	accessLogger *zap.Logger
 	engine       *gin.Engine
-	tlsConfig    *tls.Config
 }
 
 func NewHTTPServer(name ...string) *HTTPServer {
@@ -111,6 +111,19 @@ func (s *HTTPServer) createDir(dirs []string) error {
 	return nil
 }
 
+func (s *HTTPServer) initTLS() error {
+	if !s.cfg.GetEnableTLS() {
+		return nil
+	}
+
+	cert, err := tls.LoadX509KeyPair(s.cfg.GetTLSCertFile(), s.cfg.GetTLSKeyFile())
+	if err != nil {
+		return err
+	}
+	s.tlsCfg = &tls.Config{Certificates: []tls.Certificate{cert}}
+	return nil
+}
+
 func (s *HTTPServer) routePProf() {
 	if !s.cfg.GetPProfEnable() {
 		return
@@ -167,20 +180,13 @@ func (s *HTTPServer) Init(cfg *configure.Configure) error {
 	// configure server
 	s.engine.MaxMultipartMemory = s.cfg.GetMultipartMaxMemory()
 	os.Setenv("TMPDIR", s.cfg.GetMultipartTempPath())
+	err = s.initTLS()
+	if err != nil {
+		return err
+	}
 
 	// add router to pprof
 	s.routePProf()
-
-	// config tls
-	if s.cfg.GetEnableTls() {
-		cert := s.cfg.GetTlsCertFile()
-		key := s.cfg.GetTlsKeyFile()
-		cer, err := tls.LoadX509KeyPair(cert, key)
-		if err != nil {
-			return err
-		}
-		s.tlsConfig = &tls.Config{Certificates: []tls.Certificate{cer}}
-	}
 
 	// invoke initer
 	for _, fn := range s.initer {
@@ -193,15 +199,14 @@ func (s *HTTPServer) Init(cfg *configure.Configure) error {
 	return nil
 }
 
-func (s *HTTPServer) Server() (*http.Server, error) {
+func (s *HTTPServer) Server() *http.Server {
 	s.Logger().Info(fmt.Sprintf("ready to start server %s: %s",
 		s.Name(), s.cfg.GetListenAddress()))
-	server := http.Server{
-		Addr:    s.cfg.GetListenAddress(),
-		Handler: s.engine,
-		TLSConfig: s.tlsConfig,
+	return &http.Server{
+		Addr:      s.cfg.GetListenAddress(),
+		Handler:   s.engine,
+		TLSConfig: s.tlsCfg,
 	}
-	return &server, nil
 }
 
 func (s *HTTPServer) Route(relativePath string, handlers ...HandlerFunc) {

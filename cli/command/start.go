@@ -82,15 +82,10 @@ func runStart(pigeon *core.Pigeon, options startOptions) error {
 		err := server.Init(cfg)
 		if err != nil {
 			return err
+		} else if !server.Enable() {
+			continue
 		}
-
-		if server.Enable() {
-			s, e := server.Server()
-			if e != nil {
-				return e
-			}
-			servers = append(servers, s)
-		}
+		servers = append(servers, server.Server())
 	}
 
 	// 3. start a daemon
