@@ -38,13 +38,15 @@ import (
 )
 
 type InitFunc func(*configure.ServerConfigure) error
+type ShutdownFunc func()
 
 type HTTPServer struct {
-	name   string
-	cfg    *configure.ServerConfigure
-	tlsCfg *tls.Config
-	initer []InitFunc
-	enable bool
+	name       string
+	cfg        *configure.ServerConfigure
+	tlsCfg     *tls.Config
+	initer     []InitFunc
+	onShutdown []ShutdownFunc
+	enable     bool
 
 	errorLogger  *zap.Logger
 	accessLogger *zap.Logger
@@ -56,10 +58,11 @@ func NewHTTPServer(name ...string) *HTTPServer {
 	engine := gin.New()
 	engine.Use(gin.Recovery())
 	return &HTTPServer{
-		name:   utils.FirstOne(name...),
-		engine: engine,
-		initer: []InitFunc{},
-		enable: true,
+		name:       utils.FirstOne(name...),
+		engine:     engine,
+		initer:     []InitFunc{},
+		onShutdown: []ShutdownFunc{},
+		enable:     true,
 	}
 }
 
@@ -69,6 +72,10 @@ func (s *HTTPServer) Name() string {
 
 func (s *HTTPServer) Initer(i InitFunc) {
 	s.initer = append(s.initer, i)
+}
+
+func (s *HTTPServer) OnShutdown(f ShutdownFunc) {
+	s.onShutdown = append(s.onShutdown, f)
 }
 
 func (s *HTTPServer) Enable() bool {
@@ -222,4 +229,10 @@ func (s *HTTPServer) RouterGroup(relativePath string, handlers ...HandlerFunc) R
 func (s *HTTPServer) DefaultRoute(handlers ...HandlerFunc) {
 	router := &router{server: s}
 	s.engine.NoRoute(router.wrapHandlers(handlers))
+}
+
+func (s *HTTPServer) Shutdown() {
+	for _, f := range s.onShutdown {
+		f()
+	}
 }

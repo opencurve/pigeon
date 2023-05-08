@@ -110,7 +110,9 @@ func runStart(pigeon *core.Pigeon, options startOptions) error {
 	}
 
 	// 5. start server in child process
-	return gracehttp.ServeWithOptions(servers,
+	defer func() { pigeon.Shutdown() }()
+	err = gracehttp.ServeWithOptions(servers,
 		gracehttp.StopTimeout(cfg.GetCloseTimeout()),
 		gracehttp.KillTimeout(cfg.GetAbortTimeout()))
+	return err
 }

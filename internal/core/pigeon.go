@@ -61,3 +61,9 @@ func (pigeon *Pigeon) Servers() []*http.HTTPServer { return pigeon.servers }
 func (pigeon *Pigeon) SetPrefix(prefix string)     { pigeon.prefix = prefix }
 func (pigeon *Pigeon) GetPrefix() string           { return pigeon.prefix }
 func (pigeon *Pigeon) DefaultConfFile() string     { return path.Join(pigeon.prefix, "conf/pigeon.yaml") }
+
+func (pigeon *Pigeon) Shutdown() {
+	for _, server := range pigeon.servers {
+		server.Shutdown()
+	}
+}
