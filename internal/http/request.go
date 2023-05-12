@@ -235,7 +235,7 @@ func (r *Request) Logger() *zap.Logger {
 func (r *Request) log() {
 	ctx := r.Context
 	format := []string{
-		ctx.RemoteIP(),
+		ctx.ClientIP(),
 		ctx.Request.Method,
 		ctx.Request.URL.RequestURI(),
 		ctx.Request.Proto,
