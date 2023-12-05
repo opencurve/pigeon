@@ -41,10 +41,12 @@ type (
 	Configure  = configure.ServerConfigure
 	JSON       = gin.H
 	Logger     = zap.Logger
+	Pigeon     = core.Pigeon
 )
 
 var (
 	NewHTTPServer = http.NewHTTPServer
+	NewPigeon     = core.NewPigeon
 	Field         = log.Field
 
 	HTTP_METHOD_GET    = consts.HTTP_METHOD_GET

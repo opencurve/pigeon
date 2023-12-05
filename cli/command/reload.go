@@ -23,13 +23,8 @@
 package command
 
 import (
-	"fmt"
-	"strconv"
-	"syscall"
-
 	"github.com/opencurve/pigeon/internal/core"
 	cliutils "github.com/opencurve/pigeon/internal/utils"
-	utils "github.com/opencurve/pigeon/internal/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -45,7 +40,7 @@ func NewReloadCommand(pigeon *core.Pigeon) *cobra.Command {
 		Short: "Reload pigeon",
 		Args:  cliutils.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runReload(pigeon, options)
+			return pigeon.Reload(options.filename)
 		},
 		DisableFlagsInUseLine: true,
 	}
@@ -54,23 +49,4 @@ func NewReloadCommand(pigeon *core.Pigeon) *cobra.Command {
 	flags.StringVarP(&options.filename, "conf", "c", pigeon.DefaultConfFile(), "Specify pigeon configure file")
 
 	return cmd
-}
-
-func getPid(pigeon *core.Pigeon, filename string) (int, error) {
-	cfg, err := parse(pigeon, filename)
-	if err != nil {
-		return 0, err
-	}
-
-	pidfile := cfg.GetPidFile()
-	data, _ := utils.ReadFile(pidfile)
-	return strconv.Atoi(data)
-}
-
-func runReload(pigeon *core.Pigeon, options reloadOptions) error {
-	pid, err := getPid(pigeon, options.filename)
-	if err != nil {
-		return fmt.Errorf("read pid file failed: %v", err)
-	}
-	return syscall.Kill(pid, syscall.SIGUSR2)
 }
