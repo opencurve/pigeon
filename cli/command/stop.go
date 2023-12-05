@@ -23,9 +23,6 @@
 package command
 
 import (
-	"fmt"
-	"syscall"
-
 	"github.com/opencurve/pigeon/internal/core"
 	cliutils "github.com/opencurve/pigeon/internal/utils"
 	"github.com/spf13/cobra"
@@ -43,7 +40,7 @@ func NewStopCommand(pigeon *core.Pigeon) *cobra.Command {
 		Short: "Stop pigeon",
 		Args:  cliutils.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runStop(pigeon, options)
+			return pigeon.Stop(options.filename)
 		},
 		DisableFlagsInUseLine: true,
 	}
@@ -52,12 +49,4 @@ func NewStopCommand(pigeon *core.Pigeon) *cobra.Command {
 	flags.StringVarP(&options.filename, "conf", "c", pigeon.DefaultConfFile(), "Specify pigeon configure file")
 
 	return cmd
-}
-
-func runStop(pigeon *core.Pigeon, options stopOptions) error {
-	pid, err := getPid(pigeon, options.filename)
-	if err != nil {
-		return fmt.Errorf("read pid file failed: %v", err)
-	}
-	return syscall.Kill(pid, syscall.SIGTERM)
 }
